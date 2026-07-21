@@ -1,0 +1,270 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>ubcbean</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link id="gf" href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500&family=Instrument+Serif:ital@0;1&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg-1: #fdf2f4;
+    --bg-2: #fad9e2;
+    --bg-3: #f5c0d0;
+    --surface: rgba(255, 252, 253, 0.72);
+    --surface-strong: rgba(255, 252, 253, 0.92);
+    --surface-deep: #241820;
+    --ink: #241820;
+    --ink-soft: #4a3340;
+    --ink-mute: #8a7080;
+    --line: rgba(36, 24, 32, 0.08);
+    --line-strong: rgba(36, 24, 32, 0.18);
+    --accent: #e89bb0;
+    --accent-deep: #b95979;
+    --accent-soft: #fde3ea;
+    --gold: #b8893a;
+    --shadow-sm: 0 1px 2px rgba(28,24,20,0.06), 0 2px 8px rgba(28,24,20,0.04);
+    --shadow-md: 0 4px 12px rgba(28,24,20,0.08), 0 12px 32px rgba(28,24,20,0.06);
+    --shadow-lg: 0 12px 40px rgba(28,24,20,0.18), 0 24px 64px rgba(28,24,20,0.10);
+    --r-sm: 10px;
+    --r-md: 14px;
+    --r-lg: 20px;
+    --r-xl: 28px;
+    --font-body: 'Plus Jakarta Sans';
+    --font-display: 'Plus Jakarta Sans';
+  }
+  * { box-sizing: border-box; }
+  html, body {
+    margin: 0; padding: 0;
+    font-family: var(--font-body), -apple-system, system-ui, sans-serif;
+    color: var(--ink);
+    -webkit-font-smoothing: antialiased;
+    overscroll-behavior: none;
+  }
+  body {
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 24px 0;
+    background:
+      radial-gradient(1200px 600px at 20% 10%, #fde3ea 0%, transparent 60%),
+      radial-gradient(1000px 500px at 90% 80%, #fad9e2 0%, transparent 55%),
+      radial-gradient(800px 400px at 60% 50%, #fff5f7 0%, transparent 50%),
+      linear-gradient(160deg, #fdf2f4 0%, #f5c0d0 100%);
+    background-attachment: fixed;
+  }
+  .stage {
+    position: relative;
+  }
+  /* Hide scrollbars in iOS frame for cleanliness */
+  .app-scroll::-webkit-scrollbar { width: 0; height: 0; }
+</style>
+
+<script type="application/json" id="speaker-notes">[]</script>
+</head>
+<body>
+<div id="root"></div>
+
+<script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+
+<script type="text/babel" src="ios-frame.jsx"></script>
+<script type="text/babel" src="tweaks-panel.jsx"></script>
+<script type="text/babel" src="ui.jsx"></script>
+<script type="text/babel" src="screens.jsx"></script>
+
+<script type="text/babel">
+const TWEAK_DEFAULTS = /*EDITMODE-BEGIN*/{
+  "palette": "sakura",
+  "fontBody": "jakarta",
+  "fontDisplay": "jakarta"
+}/*EDITMODE-END*/;
+
+function BottomNav({ tab, go }) {
+  const tabs = [
+    { id:'home',    label:'Home',    icon:'home' },
+    { id:'order',   label:'Order',   icon:'menu' },
+    { id:'reserve', label:'Reserve', icon:'clock' },
+    { id:'loyalty', label:'Rewards', icon:'star' },
+    { id:'account', label:'Account', icon:'user' },
+  ];
+  return (
+    <div style={{
+      position:'absolute', bottom:14, left:14, right:14, zIndex:40,
+      borderRadius: 28,
+      padding: 6,
+      background: 'rgba(28,24,20,0.78)',
+      backdropFilter: 'blur(24px) saturate(180%)',
+      WebkitBackdropFilter: 'blur(24px) saturate(180%)',
+      boxShadow: '0 12px 40px rgba(28,24,20,0.30), inset 0 1px 0 rgba(255,255,255,0.10)',
+      border: '0.5px solid rgba(255,255,255,0.10)',
+      display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: 2,
+    }}>
+      {tabs.map((t) => {
+        const active = tab === t.id || (t.id==='reserve' && tab==='table') || (t.id==='loyalty' && (tab==='rewards'||tab==='subs'));
+        return (
+          <button key={t.id} onClick={() => go(t.id)} style={{
+            border: 'none', cursor: 'pointer',
+            padding: '10px 4px', borderRadius: 22,
+            background: active ? 'rgba(255,255,255,0.16)' : 'transparent',
+            color: active ? '#fff' : 'rgba(255,255,255,0.6)',
+            display:'flex', flexDirection:'column', alignItems:'center', gap: 4,
+            transition: 'background .18s ease, color .18s ease',
+            fontFamily: 'inherit',
+          }}>
+            <Icon name={t.icon} size={20} />
+            <span style={{ fontSize: 10, fontWeight: 600, letterSpacing:'0.02em' }}>{t.label}</span>
+          </button>
+        );
+      })}
+    </div>
+  );
+}
+
+function App() {
+  const [t, setTweak] = useTweaks(TWEAK_DEFAULTS);
+  const [tab, setTab] = React.useState('home');
+  const [cart, setCart] = React.useState([
+    { id:'iced-am', name:'Iced Americano', price:4.50, cat:'iced', qty:1 },
+  ]);
+  const [slot, setSlot] = React.useState(null);
+  const [confirmed, setConfirmed] = React.useState(false);
+  const [points, setPoints] = React.useState(7);
+  const [history, setHistory] = React.useState([
+    { name:'Iced Americano', date:'May 7 · 8:15 AM', stamps:1 },
+    { name:'Pour Over · Ethiopia', date:'May 5 · 2:42 PM', stamps:2 },
+    { name:'Latte', date:'May 4 · 10:08 AM', stamps:1 },
+    { name:'Yuzu Americano', date:'May 2 · 4:30 PM', stamps:1 },
+  ]);
+  const [toast, setToast] = React.useState(null);
+
+  const stageRef = React.useRef(null);
+  React.useEffect(() => {
+    applyPalette(document.documentElement, t.palette);
+    if (stageRef.current) applyPalette(stageRef.current, t.palette);
+  }, [t.palette]);
+
+  React.useEffect(() => { applyFont(t.fontBody, t.fontDisplay); }, [t.fontBody, t.fontDisplay]);
+
+  // Sync with ThemeSwitcher floating panel
+  React.useEffect(() => {
+    const onP = (e) => {
+      setTweak('palette', e.detail);
+      if (stageRef.current) applyPalette(stageRef.current, e.detail);
+    };
+    const onF = (e) => { setTweak('fontBody', e.detail.body); setTweak('fontDisplay', e.detail.display); };
+    window.addEventListener('ts-palette', onP);
+    window.addEventListener('ts-font', onF);
+    return () => { window.removeEventListener('ts-palette', onP); window.removeEventListener('ts-font', onF); };
+  }, []);
+
+  const showToast = (msg) => {
+    setToast(msg);
+    setTimeout(() => setToast(null), 2200);
+  };
+
+  const addToCart = (d) => {
+    setCart(c => {
+      const ex = c.find(x => x.id === d.id);
+      if (ex) return c.map(x => x.id === d.id ? { ...x, qty: x.qty + 1 } : x);
+      return [...c, { ...d, qty: 1 }];
+    });
+    showToast(`Added · ${d.name}`);
+  };
+  const removeFromCart = (id) => {
+    setCart(c => {
+      const ex = c.find(x => x.id === id);
+      if (!ex) return c;
+      if (ex.qty <= 1) return c.filter(x => x.id !== id);
+      return c.map(x => x.id === id ? { ...x, qty: x.qty - 1 } : x);
+    });
+  };
+  const cartTotal = cart.reduce((s, c) => s + c.price * c.qty, 0);
+  const cartCount = cart.reduce((s, c) => s + c.qty, 0);
+
+  const go = (next) => {
+    setTab(next);
+    requestAnimationFrame(() => {
+      const scroll = stageRef.current?.querySelector('.app-scroll');
+      if (scroll) scroll.scrollTop = 0;
+    });
+  };
+
+  const confirmReservation = () => {
+    setConfirmed(true);
+    setPoints(p => Math.min(10, p + cartCount));
+    setHistory(h => [
+      { name: cart[0]?.name || 'Order', date: 'Today · ' + (slot || '8:00 AM'), stamps: cartCount },
+      ...h,
+    ]);
+  };
+
+  const closeConfirm = () => {
+    setConfirmed(false);
+    setCart([]);
+    setSlot(null);
+    go('loyalty');
+  };
+
+  const redeem = (r) => {
+    setPoints(p => Math.max(0, p - r.cost));
+    setHistory(h => [{ name:`Reward: ${r.name}`, date:'Today · Now', stamps: -r.cost }, ...h]);
+    showToast(`Redeemed · ${r.name}`);
+  };
+
+  let screen;
+  switch (tab) {
+    case 'order':    screen = <OrderScreen go={go} cart={cart} addToCart={addToCart} removeFromCart={removeFromCart} cartTotal={cartTotal} cartCount={cartCount} />; break;
+    case 'reserve':  screen = <ReserveScreen go={go} cart={cart} cartTotal={cartTotal} cartCount={cartCount} addToCart={addToCart} slot={slot} setSlot={setSlot} confirmReservation={confirmReservation} />; break;
+    case 'table':    screen = <TableScreen go={go} showToast={showToast} />; break;
+    case 'loyalty':  screen = <LoyaltyScreen go={go} points={points} history={history} />; break;
+    case 'rewards':  screen = <RewardsScreen go={go} points={points} redeem={redeem} />; break;
+    case 'subs':     screen = <SubsScreen go={go} showToast={showToast} />; break;
+    case 'account':  screen = <AccountScreen go={go} points={points} />; break;
+    case 'location': screen = <LocationScreen go={go} />; break;
+    default:         screen = <HomeScreen go={go} points={points} />;
+  }
+
+  return (
+    <div className="stage">
+      <div ref={stageRef} className="app" data-screen-label="ubcbean prototype">
+        <IOSDevice width={402} height={874}>
+          <div className="app-scroll" style={{ position:'absolute', inset:0, overflow:'auto', WebkitOverflowScrolling:'touch' }}>
+            {screen}
+          </div>
+          <BottomNav tab={tab} go={go} />
+          {confirmed && (
+            <ReservedConfirm slot={slot} cart={cart} onClose={closeConfirm} />
+          )}
+          {toast && <Toast>{toast}</Toast>}
+        </IOSDevice>
+      </div>
+
+      <TweaksPanel>
+        <TweakSection label="Palette" />
+        <TweakSelect label="Theme" value={t.palette}
+          options={['sakura','rose','espresso','terra','amber','matcha','sage','slate','cobalt','lavender']}
+          onChange={(v) => setTweak('palette', v)} />
+        <TweakSection label="Typography" />
+        <TweakSelect label="Display" value={t.fontDisplay}
+          options={Object.entries(DISPLAY_FONTS).map(([k,f]) => ({value:k, label:f.label}))}
+          onChange={(v) => setTweak('fontDisplay', v)} />
+        <TweakSelect label="Body" value={t.fontBody}
+          options={Object.entries(BODY_FONTS).map(([k,f]) => ({value:k, label:f.label}))}
+          onChange={(v) => setTweak('fontBody', v)} />
+      </TweaksPanel>
+    </div>
+  );
+}
+
+ReactDOM.createRoot(document.getElementById('root')).render(<App />);
+</script>
+
+<div id="theme-switcher"></div>
+<script type="text/babel" src="theme-switcher.jsx"></script>
+
+</body>
+</html>

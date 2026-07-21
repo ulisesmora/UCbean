@@ -10,31 +10,31 @@ const config: Config = {
         display: ['var(--font-display)', 'Georgia',   'serif'],
       },
       colors: {
-        // Warm birch/cream — backgrounds
+        // Warm oat/cream — backgrounds
         birch: {
-          50:  '#f7f3ed',
-          100: '#ede6d6',
-          200: '#ddd5c4',
-          300: '#c9bda8',
+          50:  '#faf7f1',
+          100: '#f0e9da',
+          200: '#e3d5c0',
+          300: '#d0bfa4',
         },
-        // Canadian forest greens — primary actions
+        // Dusty sage — primary actions (organic biophilic, NOT Starbucks green)
         forest: {
-          50:  '#edf3ee',
-          100: '#cfe0d2',
-          300: '#7aaa82',
-          500: '#4a7d52',
-          600: '#3a6642',
-          700: '#2d5235',
-          800: '#1e3a26',
-          900: '#12251a',
+          50:  '#eff4ed',
+          100: '#d8e8d3',
+          300: '#9fc49a',
+          500: '#6ea864',
+          600: '#548a49',
+          700: '#406c37',
+          800: '#2b4924',
+          900: '#1c100a',
         },
-        // Bark/warm brown — serif accents, secondary
+        // Warm clay — serif accents, secondary
         bark: {
-          300: '#c4a882',
-          400: '#a88660',
-          500: '#8b6f47',
-          700: '#6b4f2a',
-          900: '#3d2810',
+          300: '#d4ba98',
+          400: '#c49868',
+          500: '#a87c4a',
+          700: '#7c5a2e',
+          900: '#452e14',
         },
         // Stone — muted text, borders
         stone2: {

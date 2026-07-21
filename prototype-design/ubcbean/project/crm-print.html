@@ -1,0 +1,158 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Around the Bean — Owner CRM (Print)</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500&family=Instrument+Serif:ital@0;1&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --surface: rgba(255, 252, 253, 0.72);
+    --surface-strong: #ffffff;
+    --surface-deep: #241820;
+    --ink: #241820;
+    --ink-soft: #4a3340;
+    --ink-mute: #8a7080;
+    --line: rgba(36, 24, 32, 0.09);
+    --line-strong: rgba(36, 24, 32, 0.16);
+    --accent: #e89bb0;
+    --accent-deep: #b95979;
+    --accent-soft: #fde3ea;
+    --gold: #b8893a;
+    --shadow-sm: 0 1px 2px rgba(28,24,20,0.05), 0 2px 8px rgba(28,24,20,0.04);
+    --shadow-md: 0 4px 12px rgba(28,24,20,0.07), 0 12px 32px rgba(28,24,20,0.05);
+    --shadow-lg: 0 12px 40px rgba(28,24,20,0.16), 0 24px 64px rgba(28,24,20,0.10);
+    --r-sm: 10px; --r-md: 14px; --r-lg: 18px; --r-xl: 24px;
+  }
+  * { box-sizing: border-box; }
+  html, body {
+    margin: 0; padding: 0;
+    font-family: 'Plus Jakarta Sans', -apple-system, system-ui, sans-serif;
+    color: var(--ink);
+    -webkit-font-smoothing: antialiased;
+    background: #f7f1f3;
+  }
+  @keyframes fadeUp { from { opacity:1; } to { opacity:1; } }
+  @keyframes toastIn { from { opacity:1; } to { opacity:1; } }
+  @keyframes pulse { 0%,100% { box-shadow:none; } }
+
+  .page {
+    width: 1240px;
+    margin: 0 auto 28px;
+    padding: 26px 30px 34px;
+    background: #f7f1f3;
+  }
+  .page-head {
+    display: flex; align-items: center; justify-content: space-between;
+    padding-bottom: 18px; margin-bottom: 22px;
+    border-bottom: 1.5px solid var(--line-strong);
+  }
+
+  /* Screen view: subtle frame around each page */
+  @media screen {
+    body { padding: 24px 0; }
+    .page { box-shadow: var(--shadow-md); border-radius: 12px; }
+  }
+
+  @media print {
+    @page { size: landscape; margin: 0.5cm; }
+    html, body { background: #fff !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+    .page {
+      width: 100%;
+      margin: 0;
+      padding: 6mm 4mm;
+      background: #fff !important;
+      break-after: page;
+    }
+    .page:last-child { break-after: auto; }
+    /* never clip — expand all scroll regions */
+    * { max-height: none !important; overflow: visible !important; animation: none !important; }
+    .avoid-break { break-inside: avoid; }
+  }
+</style>
+</head>
+<body>
+<div id="root"></div>
+
+<script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+
+<script type="text/babel" src="ui.jsx"></script>
+<script type="text/babel" src="crm-views.jsx"></script>
+
+<script type="text/babel">
+const noop = () => {};
+
+function PageHead({ title, sub }) {
+  return (
+    <div className="page-head">
+      <div>
+        <div style={{ fontSize:24, fontWeight:800, letterSpacing:'-0.02em' }}>{title}</div>
+        <div style={{ fontSize:13, color:'var(--ink-mute)', marginTop:3 }}>{sub}</div>
+      </div>
+      <div style={{ display:'flex', alignItems:'center', gap:11 }}>
+        <div style={{ textAlign:'right', lineHeight:1.2 }}>
+          <div style={{ fontSize:14, fontWeight:800 }}>Around the Bean</div>
+          <div style={{ fontSize:10, fontWeight:700, letterSpacing:'0.2em', textTransform:'uppercase', color:'var(--accent-deep)' }}>Owner Console</div>
+        </div>
+        <Logo size={42} color="var(--accent-deep)"/>
+      </div>
+    </div>
+  );
+}
+
+function PrintPage({ title, sub, children }) {
+  return (
+    <div className="page">
+      <PageHead title={title} sub={sub}/>
+      <div className="avoid-break">{children}</div>
+    </div>
+  );
+}
+
+function PrintApp() {
+  return (
+    <div>
+      <PrintPage title="Dashboard" sub="Tuesday · May 8 · Daily overview">
+        <Dashboard orders={CRM_ORDERS} advance={noop} go={noop}/>
+      </PrintPage>
+      <PrintPage title="Orders" sub="Live queue and history">
+        <OrdersView orders={CRM_ORDERS} advance={noop}/>
+      </PrintPage>
+      <PrintPage title="Reservations" sub="Coffee pickups and table bookings">
+        <ReservationsView orders={CRM_ORDERS}/>
+      </PrintPage>
+      <PrintPage title="Tables" sub="Floor plan and seating">
+        <TablesView/>
+      </PrintPage>
+      <PrintPage title="Menu" sub="Items, pricing and availability">
+        <MenuView/>
+      </PrintPage>
+      <PrintPage title="Members" sub="Loyalty members and tiers">
+        <MembersView/>
+      </PrintPage>
+      <PrintPage title="Subscriptions" sub="Recurring bean deliveries">
+        <SubsView/>
+      </PrintPage>
+    </div>
+  );
+}
+
+ReactDOM.createRoot(document.getElementById('root')).render(<PrintApp />);
+
+// auto-print once fonts + render settle
+window.__printReady = false;
+async function triggerPrint() {
+  if (window.__printReady) return;
+  window.__printReady = true;
+  try { await document.fonts.ready; } catch (e) {}
+  setTimeout(() => window.print(), 600);
+}
+window.addEventListener('load', () => setTimeout(triggerPrint, 700));
+</script>
+
+</body>
+</html>
