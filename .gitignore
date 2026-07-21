@@ -1,0 +1,43 @@
+# ── Dependencies ─────────────────────────────────────────
+node_modules/
+.pnpm-store/
+
+# ── Build output ──────────────────────────────────────────
+dist/
+apps/web/.next/
+apps/web/out/
+
+# ── Environment — NEVER commit real secrets ───────────────
+.env
+.env.local
+.env.*.local
+apps/api/.env
+apps/web/.env.local
+
+# ── Prisma generated (regenerated on pnpm install) ────────
+apps/api/node_modules/.prisma/
+
+# ── Logs ──────────────────────────────────────────────────
+*.log
+npm-debug.log*
+pnpm-debug.log*
+yarn-debug.log*
+
+# ── OS ────────────────────────────────────────────────────
+.DS_Store
+Thumbs.db
+Desktop.ini
+
+# ── Editor ────────────────────────────────────────────────
+.vscode/settings.json
+.idea/
+*.swp
+*.swo
+
+# ── Test / coverage ───────────────────────────────────────
+coverage/
+.nyc_output/
+
+# ── Misc ──────────────────────────────────────────────────
+.turbo/
+pgdata/

@@ -1,0 +1,37 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: ucbean
+      POSTGRES_USER: ucbean
+      POSTGRES_PASSWORD: dev_password
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ucbean"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  api:
+    build:
+      context: .
+      dockerfile: apps/api/Dockerfile
+    ports:
+      - "3000:3000"
+    environment:
+      DATABASE_URL: postgresql://ucbean:dev_password@postgres:5432/ucbean
+      JWT_SECRET: local_dev_secret_change_in_production
+      COOKIE_SECRET: local_cookie_secret_change_in_production
+      NODE_ENV: development
+      PORT: 3000
+    depends_on:
+      postgres:
+        condition: service_healthy
+    command: >
+      sh -c "node -e \"const { execSync } = require('child_process'); execSync('npx prisma migrate deploy', { stdio: 'inherit' });\" && node apps/api/dist/main.js"
+
+volumes:
+  pgdata:

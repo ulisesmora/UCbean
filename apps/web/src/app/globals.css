@@ -1,0 +1,49 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --font-body:    'Plus Jakarta Sans', system-ui, sans-serif;
+    --font-display: 'Playfair Display',  Georgia,   serif;
+    --birch-50:   #f7f3ed;
+    --birch-100:  #ede6d6;
+    --forest-700: #2d5235;
+    --bark-500:   #8b6f47;
+  }
+
+  html {
+    scroll-behavior: smooth;
+    -webkit-tap-highlight-color: transparent;
+    background-color: var(--birch-50);
+  }
+
+  body {
+    font-family: var(--font-body);
+    background-color: var(--birch-50);
+    color: #1e1208;
+  }
+
+  /* iOS safe area */
+  .pb-safe { padding-bottom: max(env(safe-area-inset-bottom), 0.5rem); }
+}
+
+@layer utilities {
+  .tap-target { min-height: 44px; min-width: 44px; }
+
+  /* Scroll ticker */
+  .ticker-track {
+    display: flex;
+    white-space: nowrap;
+    animation: ticker 32s linear infinite;
+    gap: 3rem;
+  }
+  @keyframes ticker {
+    from { transform: translateX(0); }
+    to   { transform: translateX(-50%); }
+  }
+
+  /* Photo placeholder — use these classes directly in JSX:
+     bg-birch-100 border border-birch-200 rounded-2xl overflow-hidden
+     flex items-center justify-center text-stone2-400 text-xs font-semibold */
+}

@@ -1,0 +1,19 @@
+{
+  "name": "ucbean",
+  "private": true,
+  "version": "0.0.1",
+  "engines": {
+    "node": ">=22",
+    "pnpm": ">=9"
+  },
+  "scripts": {
+    "dev:api":    "pnpm --filter @ucbean/api dev",
+    "build:api":  "pnpm --filter @ucbean/api build",
+    "db:migrate": "pnpm --filter @ucbean/api db:migrate",
+    "db:studio":  "pnpm --filter @ucbean/api db:studio",
+    "db:generate":"pnpm --filter @ucbean/api db:generate",
+    "db:reset":   "pnpm --filter @ucbean/api db:reset",
+    "dev:web":    "pnpm --filter @ucbean/web dev",
+    "build:web":  "pnpm --filter @ucbean/web build"
+  }
+}
