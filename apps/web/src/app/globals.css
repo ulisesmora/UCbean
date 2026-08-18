@@ -4,34 +4,51 @@
 
 @layer base {
   :root {
+    /* Brand tokens */
     --font-body:    'Plus Jakarta Sans', system-ui, sans-serif;
     --font-display: 'Playfair Display',  Georgia,   serif;
-    --birch-50:   #f7f3ed;
-    --birch-100:  #ede6d6;
-    --forest-700: #2d5235;
-    --bark-500:   #8b6f47;
+
+    /* shadcn semantic tokens — mapped to UCBean palette */
+    --background:        40 60% 97%;   /* birch-50  #faf7f1 */
+    --foreground:        22 56% 8%;    /* stone2-900 #1e1208 */
+    --card:              40 60% 97%;
+    --card-foreground:   22 56% 8%;
+    --popover:           40 60% 97%;
+    --popover-foreground: 22 56% 8%;
+    --primary:           110 33% 32%; /* forest-700 #406c37 */
+    --primary-foreground: 40 60% 97%;
+    --secondary:         37 44% 90%;  /* birch-100  #f0e9da */
+    --secondary-foreground: 22 56% 8%;
+    --muted:             37 44% 90%;
+    --muted-foreground:  30 11% 38%;  /* stone2-600 #6b6358 */
+    --accent:            33 44% 59%;  /* bark-400   #c49868 */
+    --accent-foreground: 22 56% 8%;
+    --destructive:       0 72% 51%;
+    --destructive-foreground: 40 60% 97%;
+    --border:            35 36% 82%;  /* birch-200  #e3d5c0 */
+    --input:             35 36% 82%;
+    --ring:              110 33% 32%; /* forest-700 */
+    --radius:            0.75rem;
   }
 
   html {
     scroll-behavior: smooth;
     -webkit-tap-highlight-color: transparent;
-    background-color: var(--birch-50);
+    background-color: hsl(var(--background));
   }
 
   body {
     font-family: var(--font-body);
-    background-color: var(--birch-50);
-    color: #1e1208;
+    background-color: hsl(var(--background));
+    color: hsl(var(--foreground));
   }
 
-  /* iOS safe area */
   .pb-safe { padding-bottom: max(env(safe-area-inset-bottom), 0.5rem); }
 }
 
 @layer utilities {
   .tap-target { min-height: 44px; min-width: 44px; }
 
-  /* Scroll ticker */
   .ticker-track {
     display: flex;
     white-space: nowrap;
@@ -42,8 +59,4 @@
     from { transform: translateX(0); }
     to   { transform: translateX(-50%); }
   }
-
-  /* Photo placeholder — use these classes directly in JSX:
-     bg-birch-100 border border-birch-200 rounded-2xl overflow-hidden
-     flex items-center justify-center text-stone2-400 text-xs font-semibold */
 }

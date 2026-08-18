@@ -7,13 +7,26 @@
     "pnpm": ">=9"
   },
   "scripts": {
-    "dev:api":    "pnpm --filter @ucbean/api dev",
-    "build:api":  "pnpm --filter @ucbean/api build",
+    "dev:api": "pnpm --filter @ucbean/api dev",
+    "build:api": "pnpm --filter @ucbean/api build",
     "db:migrate": "pnpm --filter @ucbean/api db:migrate",
-    "db:studio":  "pnpm --filter @ucbean/api db:studio",
-    "db:generate":"pnpm --filter @ucbean/api db:generate",
-    "db:reset":   "pnpm --filter @ucbean/api db:reset",
-    "dev:web":    "pnpm --filter @ucbean/web dev",
-    "build:web":  "pnpm --filter @ucbean/web build"
+    "db:studio": "pnpm --filter @ucbean/api db:studio",
+    "db:generate": "pnpm --filter @ucbean/api db:generate",
+    "db:reset": "pnpm --filter @ucbean/api db:reset",
+    "db:seed": "pnpm --filter @ucbean/api db:seed",
+    "dev:web": "pnpm --filter @ucbean/web dev",
+    "build:web": "pnpm --filter @ucbean/web build",
+    "test": "pnpm --filter @ucbean/api test",
+    "test:cov": "pnpm --filter @ucbean/api test:cov",
+    "test:web": "pnpm --filter @ucbean/web test",
+    "test:web:watch": "pnpm --filter @ucbean/web test:watch",
+    "format": "prettier --write \"**/*.{ts,json,md}\"",
+    "lint": "pnpm --filter @ucbean/api lint",
+    "prepare": "husky"
+  },
+  "devDependencies": {
+    "husky": "^9.1.7",
+    "lint-staged": "^17.3.0",
+    "prettier": "^3.9.6"
   }
 }

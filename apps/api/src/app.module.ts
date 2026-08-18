@@ -5,6 +5,9 @@ import { EventEmitterModule } from '@nestjs/event-emitter';
 import { PrismaModule } from './prisma/prisma.module';
 import { AuthModule } from './modules/auth/auth.module';
 import { UsersModule } from './modules/users/users.module';
+import { ProductsModule } from './modules/products/products.module';
+import { ReservationsModule } from './modules/reservations/reservations.module';
+import { OrdersModule } from './modules/orders/orders.module';
 
 @Module({
   imports: [
@@ -14,6 +17,9 @@ import { UsersModule } from './modules/users/users.module';
     PrismaModule,
     UsersModule,
     AuthModule,
+    ProductsModule,
+    ReservationsModule,
+    OrdersModule,
   ],
 })
 export class AppModule {}

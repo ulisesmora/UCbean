@@ -1,8 +1,15 @@
 import {
-  Body, Controller, HttpCode, HttpStatus,
-  Post, Req, Res, UnauthorizedException, UseGuards,
+  Body,
+  Controller,
+  HttpCode,
+  HttpStatus,
+  Post,
+  Req,
+  Res,
+  UnauthorizedException,
+  UseGuards,
 } from '@nestjs/common';
-import { FastifyReply, FastifyRequest } from 'fastify';
+import { ApiTags, ApiOperation, ApiBearerAuth, ApiBody } from '@nestjs/swagger';
 import { RegisterUseCase } from '../../application/use-cases/register.use-case';
 import { LoginUseCase } from '../../application/use-cases/login.use-case';
 import { RefreshTokenUseCase } from '../../application/use-cases/refresh-token.use-case';
@@ -22,6 +29,7 @@ const cookieOpts = (secure: boolean) => ({
   maxAge: 7 * 24 * 3600,
 });
 
+@ApiTags('Auth')
 @Controller('auth')
 export class AuthController {
   private readonly secure = process.env.NODE_ENV === 'production';
@@ -34,7 +42,9 @@ export class AuthController {
   ) {}
 
   @Post('register')
-  async register(@Body() dto: RegisterDto, @Res({ passthrough: true }) res: FastifyReply) {
+  @ApiOperation({ summary: 'Register a new customer account' })
+  @ApiBody({ type: RegisterDto })
+  async register(@Body() dto: RegisterDto, @Res({ passthrough: true }) res: any) {
     const { accessToken, refreshToken, user } = await this.registerUseCase.execute(dto);
     res.setCookie(REFRESH_COOKIE, refreshToken, cookieOpts(this.secure));
     return { accessToken, user };
@@ -42,7 +52,9 @@ export class AuthController {
 
   @Post('login')
   @HttpCode(HttpStatus.OK)
-  async login(@Body() dto: LoginDto, @Res({ passthrough: true }) res: FastifyReply) {
+  @ApiOperation({ summary: 'Login and receive access + refresh tokens' })
+  @ApiBody({ type: LoginDto })
+  async login(@Body() dto: LoginDto, @Res({ passthrough: true }) res: any) {
     const { accessToken, refreshToken, user } = await this.loginUseCase.execute(dto);
     res.setCookie(REFRESH_COOKIE, refreshToken, cookieOpts(this.secure));
     return { accessToken, user };
@@ -50,7 +62,8 @@ export class AuthController {
 
   @Post('refresh')
   @HttpCode(HttpStatus.OK)
-  async refresh(@Req() req: FastifyRequest, @Res({ passthrough: true }) res: FastifyReply) {
+  @ApiOperation({ summary: 'Rotate access token using httpOnly refresh cookie' })
+  async refresh(@Req() req: any, @Res({ passthrough: true }) res: any) {
     const token = (req.cookies as Record<string, string>)?.[REFRESH_COOKIE];
     if (!token) throw new UnauthorizedException('Missing refresh token');
     const { accessToken, refreshToken } = await this.refreshUseCase.execute(token);
@@ -61,7 +74,9 @@ export class AuthController {
   @Post('logout')
   @UseGuards(JwtAuthGuard)
   @HttpCode(HttpStatus.NO_CONTENT)
-  async logout(@CurrentUser() user: JwtPayloadVo, @Res({ passthrough: true }) res: FastifyReply) {
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Logout — clears refresh token hash and cookie' })
+  async logout(@CurrentUser() user: JwtPayloadVo, @Res({ passthrough: true }) res: any) {
     await this.logoutUseCase.execute(user.sub);
     res.clearCookie(REFRESH_COOKIE, { path: '/api/v1/auth' });
   }
