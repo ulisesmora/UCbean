@@ -1,4 +1,5 @@
 import { OrderEntity, OrderStatus, OrderType } from '../entities/order.entity';
+import type { DrinkBuild } from '../value-objects/drink-build';
 
 export const ORDER_REPOSITORY = Symbol('ORDER_REPOSITORY');
 
@@ -7,7 +8,15 @@ export interface CreateOrderData {
   type: OrderType;
   notes?: string;
   deliveryAddressId?: string;
-  items: { productId: string; qty: number; unitPrice: number }[];
+  items: {
+    productId: string;
+    qty: number;
+    unitPrice: number;
+    build?: DrinkBuild;
+    recipeId?: string;
+    name?: string;
+    ticket?: string;
+  }[];
 }
 
 export interface IOrderRepository {

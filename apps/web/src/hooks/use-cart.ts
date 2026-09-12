@@ -6,52 +6,55 @@ import { useAuthStore } from '@/stores/auth.store';
 import { api } from '@/lib/api';
 import type { Order } from '@/types/api.types';
 
-const USE_MOCKS = process.env.NEXT_PUBLIC_USE_MOCKS === 'true';
+export { useCartStore };
 
-function mockCreateOrder(
-  orderType: 'PICKUP' | 'TABLE' | 'DELIVERY',
-  items: { productId: string; qty: number }[],
-): Promise<Order> {
-  return new Promise((res) =>
-    setTimeout(
-      () =>
-        res({
-          id: 'order-mock-' + Date.now(),
-          userId: 'mock-user-1',
-          type: orderType,
-          status: 'CONFIRMED',
-          total: 0,
-          notes: null,
-          items: items.map((i) => ({
-            productId: i.productId,
-            productName: 'Item',
-            qty: i.qty,
-            unitPrice: 0,
-            subtotal: 0,
-          })),
-          createdAt: new Date().toISOString(),
-        }),
-      600,
-    ),
-  );
+export interface CheckoutInput {
+  type: 'PICKUP' | 'TABLE' | 'DELIVERY';
+  /** Collection day as YYYY-MM-DD and time as HH:MM. Both required for PICKUP. */
+  date?: string;
+  slot?: string;
+  notes?: string;
 }
 
-export { useCartStore };
+/**
+ * A date and a wall-clock time, as the instant the API expects.
+ *
+ * Built in local time on purpose. The times the customer picked are the café's
+ * opening hours, and the café is in one place.
+ */
+function slotToIso(date: string, slot: string): string {
+  const [h, m] = slot.split(':').map(Number);
+  const when = new Date(`${date}T00:00:00`);
+  when.setHours(h, m, 0, 0);
+  return when.toISOString();
+}
 
 export function useCheckout() {
   const { items, clearCart } = useCartStore();
   const { accessToken } = useAuthStore();
 
   return useMutation({
-    mutationFn: (orderType: 'PICKUP' | 'TABLE' | 'DELIVERY') => {
-      const payload = items.map((i) => ({ productId: i.product.id, qty: i.qty }));
-      if (USE_MOCKS) return mockCreateOrder(orderType, payload);
-      return api.post<Order>(
+    mutationFn: ({ type, date, slot, notes }: CheckoutInput) =>
+      api.post<Order>(
         '/orders',
-        { type: orderType, items: payload },
+        {
+          type,
+          notes,
+          slotTime: date && slot ? slotToIso(date, slot) : undefined,
+          // The formula travels with the line, so the kitchen sees the same
+          // drink the customer configured. Price is deliberately not sent:
+          // the server reads it off the catalogue.
+          items: items.map((i) => ({
+            productId: i.product.id,
+            qty: i.qty,
+            build: i.build,
+            recipeId: i.recipeId,
+            name: i.label,
+            ticket: i.ticket,
+          })),
+        },
         { headers: { Authorization: `Bearer ${accessToken}` } },
-      );
-    },
+      ),
     onSuccess: () => {
       clearCart();
     },

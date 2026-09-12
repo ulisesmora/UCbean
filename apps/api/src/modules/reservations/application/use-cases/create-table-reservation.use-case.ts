@@ -1,4 +1,5 @@
 import { Inject, Injectable, BadRequestException } from '@nestjs/common';
+import { EventEmitter2 } from '@nestjs/event-emitter';
 import {
   ITableReservationRepository,
   TABLE_RESERVATION_REPOSITORY,
@@ -8,6 +9,7 @@ import {
   TABLE_REPOSITORY,
 } from '../../domain/repositories/table.repository.interface';
 import { TableReservation } from '../../domain/entities/table-reservation.entity';
+import { EVENTS, type TableReservationPlacedEvent } from '../../../../common/events/domain-events';
 
 @Injectable()
 export class CreateTableReservationUseCase {
@@ -16,6 +18,7 @@ export class CreateTableReservationUseCase {
     private readonly reservations: ITableReservationRepository,
     @Inject(TABLE_REPOSITORY)
     private readonly tables: ITableRepository,
+    private readonly events: EventEmitter2,
   ) {}
 
   async execute(data: {
@@ -36,6 +39,15 @@ export class CreateTableReservationUseCase {
       throw new BadRequestException('No tables available for that time and party size');
     }
 
-    return this.reservations.create({ ...data, tableId: table.id });
+    const reservation = await this.reservations.create({ ...data, tableId: table.id });
+
+    this.events.emit(EVENTS.tableReservationPlaced, {
+      reservationId: reservation.id,
+      userId: reservation.userId,
+      partySize: reservation.partySize,
+      scheduledAt: reservation.scheduledAt,
+    } satisfies TableReservationPlacedEvent);
+
+    return reservation;
   }
 }

@@ -1,6 +1,20 @@
 import type { Config } from 'tailwindcss';
 import animate from 'tailwindcss-animate';
 
+/**
+ * Around the Bean — white brutalism.
+ *
+ * Paper-white ground, black structure, forest neon used as mass rather than as
+ * ink. Presence comes from weight and edge, not from glow.
+ *
+ * Contrast rule that shapes this whole palette: #2FE86B on white is about
+ * 1.7:1, so the green is a FILL only and always carries near-black text, where
+ * it reaches 12:1. Green as type on white uses forest-700 (#11753A, 5.8:1).
+ *
+ * The birch/forest/bark/stone2 names are kept on purpose: every page already
+ * speaks them, so redefining the values flips the whole site instead of forcing
+ * an edit in each file. Read them as roles, not as colours.
+ */
 const config: Config = {
   content: ['./src/**/*.{ts,tsx}'],
   theme: {
@@ -9,38 +23,54 @@ const config: Config = {
         sans: ['var(--font-body)', 'system-ui', 'sans-serif'],
         body: ['var(--font-body)', 'system-ui', 'sans-serif'],
         display: ['var(--font-display)', 'Georgia', 'serif'],
+        seal: ['var(--font-seal)', 'var(--font-display)', 'Georgia', 'serif'],
+        mono: ['var(--font-mono)', 'ui-monospace', 'SFMono-Regular', 'monospace'],
       },
-      // Brand palette (raw hex — used directly in JSX)
       colors: {
+        // Paper. The page is white and stays white.
         birch: {
-          50: '#faf7f1',
-          100: '#f0e9da',
-          200: '#e3d5c0',
-          300: '#d0bfa4',
+          50: '#FFFFFF',
+          100: '#F5F5F2',
+          200: '#E2E2DC',
+          300: '#0A0A0A', // structural rule — brutalism draws its lines in ink
         },
+        // Forest neon. 700 is the only member safe as type on white.
         forest: {
-          50: '#eff4ed',
-          100: '#d8e8d3',
-          300: '#9fc49a',
-          500: '#6ea864',
-          600: '#548a49',
-          700: '#406c37',
-          800: '#2b4924',
-          900: '#1c100a',
+          50: '#EDFBF2',
+          100: '#CDF7DD',
+          300: '#2FE86B',
+          500: '#2FE86B',
+          600: '#1AB757',
+          700: '#11753A',
+          800: '#0C5E2C',
+          900: '#062C15',
         },
+        // Ember, the second accent. 700 is the type-safe member.
         bark: {
-          300: '#d4ba98',
-          400: '#c49868',
-          500: '#a87c4a',
-          700: '#7c5a2e',
-          900: '#452e14',
+          300: '#FFD9C7',
+          400: '#FF7A42',
+          500: '#FF5A18',
+          700: '#A83700',
+          900: '#3D1400',
         },
         stone2: {
-          400: '#9a9285',
-          600: '#6b6358',
-          900: '#1e1208',
+          400: '#8A8A82',
+          600: '#4A4A45',
+          900: '#0A0A0A',
         },
-        // shadcn semantic tokens (CSS variable–driven)
+        neon: {
+          400: '#7AF2A0',
+          500: '#2FE86B', // fill only
+          600: '#1AB757',
+          700: '#11753A', // type-safe on white
+        },
+        seal: {
+          50: '#FFEDE6',
+          300: '#FFB79B',
+          500: '#FF5A18',
+          600: '#D94400',
+          700: '#A83700',
+        },
         background: 'hsl(var(--background))',
         foreground: 'hsl(var(--foreground))',
         border: 'hsl(var(--border))',
@@ -75,10 +105,28 @@ const config: Config = {
           foreground: 'hsl(var(--popover-foreground))',
         },
       },
-      borderRadius: {
-        lg: 'var(--radius)',
-        md: 'calc(var(--radius) - 2px)',
-        sm: 'calc(var(--radius) - 4px)',
+      // Brutalism does not round things off.
+      borderRadius: { sm: '0px', md: '0px', lg: '0px', xl: '0px', '2xl': '0px', '3xl': '0px' },
+      borderWidth: { 3: '3px' },
+      boxShadow: {
+        // Offset slab, the brutalist signature. Ink, not glow.
+        hard: '6px 6px 0 0 #0A0A0A',
+        'hard-lg': '10px 10px 0 0 #0A0A0A',
+        'hard-neon': '6px 6px 0 0 #2FE86B',
+      },
+      keyframes: {
+        drift: {
+          '0%, 100%': { transform: 'translate3d(0,0,0) scale(1)' },
+          '50%': { transform: 'translate3d(3%, -2%, 0) scale(1.06)' },
+        },
+        rise: {
+          from: { opacity: '0', transform: 'translateY(16px)' },
+          to: { opacity: '1', transform: 'translateY(0)' },
+        },
+      },
+      animation: {
+        drift: 'drift 24s ease-in-out infinite',
+        rise: 'rise 0.6s cubic-bezier(0.22, 1, 0.36, 1) both',
       },
     },
   },

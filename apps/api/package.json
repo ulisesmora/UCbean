@@ -12,6 +12,7 @@
     "db:generate": "prisma generate",
     "db:reset": "prisma migrate reset",
     "db:seed": "ts-node prisma/seed.ts",
+    "db:seed:recipes": "ts-node --compiler-options {\"module\":\"CommonJS\"} prisma/seed-recipes.ts",
     "test": "jest",
     "test:watch": "jest --watch",
     "test:cov": "jest --coverage",

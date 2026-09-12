@@ -38,7 +38,9 @@ describe('CreateTableReservationUseCase', () => {
     tableRepo = {
       findAvailable: jest.fn().mockResolvedValue(table),
     };
-    useCase = new CreateTableReservationUseCase(reservationRepo, tableRepo);
+    useCase = new CreateTableReservationUseCase(reservationRepo, tableRepo, {
+      emit: jest.fn(),
+    } as any);
   });
 
   it('creates reservation when table is available', async () => {

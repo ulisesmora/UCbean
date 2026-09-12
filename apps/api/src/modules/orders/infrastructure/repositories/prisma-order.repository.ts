@@ -1,10 +1,12 @@
 import { Injectable } from '@nestjs/common';
+import { Prisma } from '@prisma/client';
 import { PrismaService } from '../../../../prisma/prisma.service';
 import {
   IOrderRepository,
   CreateOrderData,
 } from '../../domain/repositories/order.repository.interface';
 import { OrderEntity, OrderItemEntity, OrderStatus } from '../../domain/entities/order.entity';
+import type { DrinkBuild } from '../../domain/value-objects/drink-build';
 
 type PrismaOrderFull = {
   id: string;
@@ -16,7 +18,16 @@ type PrismaOrderFull = {
   deliveryAddressId: string | null;
   createdAt: Date;
   updatedAt: Date;
-  items: { id: string; productId: string; qty: number; unitPrice: { toNumber(): number } }[];
+  items: {
+    id: string;
+    productId: string;
+    qty: number;
+    unitPrice: { toNumber(): number };
+    options: unknown;
+    recipeId: string | null;
+    nameSnapshot: string | null;
+    ticketSnapshot: string | null;
+  }[];
 };
 
 @Injectable()
@@ -25,7 +36,17 @@ export class PrismaOrderRepository implements IOrderRepository {
 
   private toEntity(r: PrismaOrderFull): OrderEntity {
     const items = r.items.map(
-      (i) => new OrderItemEntity(i.id, i.productId, i.qty, i.unitPrice.toNumber()),
+      (i) =>
+        new OrderItemEntity(
+          i.id,
+          i.productId,
+          i.qty,
+          i.unitPrice.toNumber(),
+          (i.options as DrinkBuild | null) ?? null,
+          i.recipeId,
+          i.nameSnapshot,
+          i.ticketSnapshot,
+        ),
     );
     return new OrderEntity(
       r.id,
@@ -68,7 +89,20 @@ export class PrismaOrderRepository implements IOrderRepository {
         total,
         notes: data.notes,
         deliveryAddressId: data.deliveryAddressId,
-        items: { create: data.items.map((i) => ({ ...i })) },
+        items: {
+          create: data.items.map((i) => ({
+            productId: i.productId,
+            qty: i.qty,
+            unitPrice: i.unitPrice,
+            // The build is a plain object of strings and string arrays, which
+            // is valid JSON, but an interface carries no index signature so
+            // Prisma's InputJsonValue cannot see that. The cast says so.
+            options: (i.build ?? undefined) as Prisma.InputJsonValue | undefined,
+            recipeId: i.recipeId,
+            nameSnapshot: i.name,
+            ticketSnapshot: i.ticket,
+          })),
+        },
         statusHistory: { create: { status: 'PENDING' } },
       },
       include: this.include,

@@ -1,5 +1,5 @@
 import type { Metadata, Viewport } from 'next';
-import { Playfair_Display, Plus_Jakarta_Sans } from 'next/font/google';
+import { Hahmlet, JetBrains_Mono, Playfair_Display, Plus_Jakarta_Sans } from 'next/font/google';
 import './globals.css';
 import { Header } from '@/components/layout/header';
 import { MobileNav } from '@/components/layout/mobile-nav';
@@ -9,6 +9,23 @@ const displayFont = Playfair_Display({
   subsets: ['latin'],
   variable: '--font-display',
   style: ['normal', 'italic'],
+  display: 'swap',
+});
+
+// Hahmlet is a Korean serif drawn with a Latin companion. One typeface that
+// already carries both traditions, so the fusion is structural, not decorative.
+const sealFont = Hahmlet({
+  subsets: ['latin'],
+  variable: '--font-seal',
+  weight: ['300', '400', '600', '700'],
+  display: 'swap',
+});
+
+// Structural type. Prices, counts and labels are data, so they get a grid.
+const monoFont = JetBrains_Mono({
+  subsets: ['latin'],
+  variable: '--font-mono',
+  weight: ['400', '500', '700'],
   display: 'swap',
 });
 
@@ -28,7 +45,7 @@ export const metadata: Metadata = {
 };
 
 export const viewport: Viewport = {
-  themeColor: '#f7f3ed',
+  themeColor: '#ffffff',
   width: 'device-width',
   initialScale: 1,
   viewportFit: 'cover',
@@ -36,11 +53,14 @@ export const viewport: Viewport = {
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="en" className={`${displayFont.variable} ${bodyFont.variable}`}>
+    <html
+      lang="en"
+      className={`${displayFont.variable} ${sealFont.variable} ${monoFont.variable} ${bodyFont.variable}`}
+    >
       <body className="min-h-screen bg-birch-50 text-stone2-900 font-body antialiased">
         <Providers>
           <Header />
-          <main className="pb-20 md:pb-0">{children}</main>
+          <main className="page-bloom relative pb-20 md:pb-0">{children}</main>
           <MobileNav />
         </Providers>
       </body>

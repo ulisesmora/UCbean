@@ -21,15 +21,15 @@ export function MenuClient() {
       {loadingCats ? (
         <div className="flex gap-2 mb-8">
           {[1, 2, 3, 4].map((i) => (
-            <Skeleton key={i} className="h-9 w-24 rounded-full" />
+            <Skeleton key={i} className="h-9 w-24 " />
           ))}
         </div>
       ) : categories.length > 0 ? (
         <Tabs value={activeCat} onValueChange={setActiveCat} className="mb-8">
-          <TabsList className="h-auto bg-transparent p-0 flex flex-wrap gap-2">
+          <TabsList className="flex h-auto flex-wrap gap-3 bg-transparent p-0">
             <TabsTrigger
               value="all"
-              className="rounded-full px-5 py-2 text-xs font-semibold border border-birch-200 data-[state=active]:bg-forest-700 data-[state=active]:text-white data-[state=active]:border-forest-700 bg-white text-stone2-600"
+              className="btn px-5 py-2 text-[13px] data-[state=active]:bg-neon-500"
             >
               All
             </TabsTrigger>
@@ -37,7 +37,7 @@ export function MenuClient() {
               <TabsTrigger
                 key={cat.id}
                 value={cat.id}
-                className="rounded-full px-5 py-2 text-xs font-semibold border border-birch-200 data-[state=active]:bg-forest-700 data-[state=active]:text-white data-[state=active]:border-forest-700 bg-white text-stone2-600"
+                className="btn px-5 py-2 text-[13px] data-[state=active]:bg-neon-500"
               >
                 {cat.name}
               </TabsTrigger>
@@ -48,9 +48,9 @@ export function MenuClient() {
 
       {/* Product grid */}
       {loading ? (
-        <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
+        <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
           {Array.from({ length: 6 }).map((_, i) => (
-            <Skeleton key={i} className="h-36 rounded-2xl" />
+            <Skeleton key={i} className="h-36 " />
           ))}
         </div>
       ) : products.length === 0 ? (
@@ -60,7 +60,7 @@ export function MenuClient() {
             : 'No items in this category right now.'}
         </p>
       ) : (
-        <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
+        <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
           {products
             .filter((p) => p.isAvailable)
             .map((product) => (

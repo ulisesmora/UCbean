@@ -1,3 +1,7 @@
+import type { Build as DrinkBuild } from '@/lib/builder';
+
+export type { DrinkBuild };
+
 export interface Category {
   id: string;
   name: string;
@@ -21,6 +25,19 @@ export interface OrderItem {
   qty: number;
   unitPrice: number;
   subtotal: number;
+  /** The formula, when the drink was built rather than picked off the menu. */
+  build?: DrinkBuild | null;
+  recipeId?: string | null;
+  name?: string | null;
+  ticket?: string | null;
+}
+
+/** What the shop promises about when an order will be on the counter. */
+export interface PickupReservation {
+  id: string;
+  orderId: string;
+  slotTime: string;
+  confirmationCode: string;
 }
 
 export interface Order {
@@ -32,11 +49,13 @@ export interface Order {
   notes: string | null;
   items: OrderItem[];
   createdAt: string;
+  pickup?: PickupReservation | null;
 }
 
 export interface SlotAvailability {
   date: string;
-  slots: Array<{ time: string; available: number; booked: number }>;
+  /** Open times as HH:MM. The API only lists slots that still have room. */
+  slots: string[];
 }
 
 export interface TableReservation {

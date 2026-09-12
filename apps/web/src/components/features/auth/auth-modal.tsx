@@ -62,7 +62,7 @@ function LoginForm({ onSuccess }: { onSuccess: () => void }) {
           id="login-email"
           type="email"
           placeholder="you@example.com"
-          className="border-birch-200 focus-visible:ring-forest-700"
+          className="border-birch-200 focus-visible:ring-stone2-900"
           {...register('email')}
         />
         {errors.email && <p className="text-xs text-red-500">{errors.email.message}</p>}
@@ -75,7 +75,7 @@ function LoginForm({ onSuccess }: { onSuccess: () => void }) {
           id="login-password"
           type="password"
           placeholder="••••••••"
-          className="border-birch-200 focus-visible:ring-forest-700"
+          className="border-birch-200 focus-visible:ring-stone2-900"
           {...register('password')}
         />
         {errors.password && <p className="text-xs text-red-500">{errors.password.message}</p>}
@@ -83,7 +83,7 @@ function LoginForm({ onSuccess }: { onSuccess: () => void }) {
       <Button
         type="submit"
         disabled={login.isPending}
-        className="w-full bg-forest-700 hover:bg-forest-800 text-white font-semibold rounded-xl h-11"
+        className="w-full bg-neon-500 hover:bg-neon-600 text-stone2-900 font-semibold  h-11"
       >
         {login.isPending ? 'Signing in...' : 'Sign in'}
       </Button>
@@ -120,7 +120,7 @@ function RegisterForm({ onSuccess }: { onSuccess: () => void }) {
         <Input
           id="reg-name"
           placeholder="Your name"
-          className="border-birch-200 focus-visible:ring-forest-700"
+          className="border-birch-200 focus-visible:ring-stone2-900"
           {...register('name')}
         />
         {errors.name && <p className="text-xs text-red-500">{errors.name.message}</p>}
@@ -133,7 +133,7 @@ function RegisterForm({ onSuccess }: { onSuccess: () => void }) {
           id="reg-email"
           type="email"
           placeholder="you@example.com"
-          className="border-birch-200 focus-visible:ring-forest-700"
+          className="border-birch-200 focus-visible:ring-stone2-900"
           {...register('email')}
         />
         {errors.email && <p className="text-xs text-red-500">{errors.email.message}</p>}
@@ -146,7 +146,7 @@ function RegisterForm({ onSuccess }: { onSuccess: () => void }) {
           id="reg-password"
           type="password"
           placeholder="••••••••"
-          className="border-birch-200 focus-visible:ring-forest-700"
+          className="border-birch-200 focus-visible:ring-stone2-900"
           {...register('password')}
         />
         {errors.password && <p className="text-xs text-red-500">{errors.password.message}</p>}
@@ -154,7 +154,7 @@ function RegisterForm({ onSuccess }: { onSuccess: () => void }) {
       <Button
         type="submit"
         disabled={register_.isPending}
-        className="w-full bg-forest-700 hover:bg-forest-800 text-white font-semibold rounded-xl h-11"
+        className="w-full bg-neon-500 hover:bg-neon-600 text-stone2-900 font-semibold  h-11"
       >
         {register_.isPending ? 'Creating account...' : 'Create account'}
       </Button>
@@ -178,13 +178,13 @@ export function AuthModal({ open, onOpenChange }: Props) {
           <TabsList className="w-full bg-birch-100">
             <TabsTrigger
               value="login"
-              className="flex-1 data-[state=active]:bg-white data-[state=active]:text-forest-700"
+              className="flex-1 data-[state=active]:bg-birch-100 data-[state=active]:text-forest-700"
             >
               Sign in
             </TabsTrigger>
             <TabsTrigger
               value="register"
-              className="flex-1 data-[state=active]:bg-white data-[state=active]:text-forest-700"
+              className="flex-1 data-[state=active]:bg-birch-100 data-[state=active]:text-forest-700"
             >
               Create account
             </TabsTrigger>
@@ -207,7 +207,7 @@ export function AuthButton() {
     <>
       <button
         onClick={() => setOpen(true)}
-        className="hidden md:inline-flex items-center px-4 py-1.5 rounded-full border border-forest-700 text-forest-700 text-xs font-semibold hover:bg-forest-50 transition-colors"
+        className="hidden md:inline-flex items-center px-4 py-1.5  border border-stone2-900 text-forest-700 text-xs font-semibold hover:bg-forest-50 transition-colors"
       >
         Sign in
       </button>

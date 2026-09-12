@@ -74,7 +74,7 @@ export default function TablePage() {
         <Button
           onClick={() => setDone(false)}
           variant="outline"
-          className="border-forest-700 text-forest-700"
+          className="border-stone2-900 text-forest-700"
         >
           Make another reservation
         </Button>
@@ -95,10 +95,7 @@ export default function TablePage() {
           Book your spot in our cozy space. We keep it simple — show up, settle in.
         </p>
 
-        <form
-          onSubmit={handleSubmit(onSubmit)}
-          className="space-y-5 bg-white rounded-2xl border border-birch-200 p-6"
-        >
+        <form onSubmit={handleSubmit(onSubmit)} className="space-y-5 glass glass-edge p-6">
           {/* Party size */}
           <div className="space-y-1.5">
             <Label className="text-stone2-700 font-semibold text-sm">Party size</Label>
@@ -111,7 +108,7 @@ export default function TablePage() {
                     {...register('partySize', { valueAsNumber: true })}
                     className="sr-only peer"
                   />
-                  <span className="flex items-center justify-center h-10 rounded-xl border border-birch-200 text-sm font-semibold text-stone2-600 peer-checked:bg-forest-700 peer-checked:text-white peer-checked:border-forest-700 transition-all">
+                  <span className="flex items-center justify-center h-10  border border-birch-200 text-sm font-semibold text-stone2-600 peer-checked:bg-neon-500 peer-checked:text-stone2-900 peer-checked:border-stone2-900 transition-all">
                     {n}
                   </span>
                 </label>
@@ -132,7 +129,7 @@ export default function TablePage() {
               id="res-date"
               type="date"
               min={today}
-              className="border-birch-200 focus-visible:ring-forest-700"
+              className="border-birch-200 focus-visible:ring-stone2-900"
               {...register('date')}
             />
             {errors.date && <p className="text-xs text-red-500">{errors.date.message}</p>}
@@ -149,7 +146,7 @@ export default function TablePage() {
               min="07:00"
               max="19:00"
               step="900"
-              className="border-birch-200 focus-visible:ring-forest-700"
+              className="border-birch-200 focus-visible:ring-stone2-900"
               {...register('time')}
             />
             {errors.time && <p className="text-xs text-red-500">{errors.time.message}</p>}
@@ -163,7 +160,7 @@ export default function TablePage() {
             <Input
               id="res-notes"
               placeholder="Accessibility needs, celebrations, preferences..."
-              className="border-birch-200 focus-visible:ring-forest-700"
+              className="border-birch-200 focus-visible:ring-stone2-900"
               {...register('notes')}
             />
           </div>
@@ -171,7 +168,7 @@ export default function TablePage() {
           <Button
             type="submit"
             disabled={book.isPending}
-            className="w-full bg-forest-700 hover:bg-forest-800 text-white font-semibold rounded-xl h-12"
+            className="w-full bg-neon-500 hover:bg-neon-600 text-stone2-900 font-semibold  h-12"
           >
             {book.isPending ? 'Reserving...' : 'Reserve table'}
           </Button>

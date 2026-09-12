@@ -4,6 +4,7 @@ import { JwtAuthGuard } from '../../../../common/guards/jwt-auth.guard';
 import { RolesGuard } from '../../../../common/guards/roles.guard';
 import { Roles } from '../../../../common/decorators/roles.decorator';
 import { CurrentUser } from '../../../../common/decorators/current-user.decorator';
+import { JwtPayloadVo } from '../../../auth/domain/value-objects/jwt-payload.vo';
 import { CreateOrderUseCase } from '../../application/use-cases/create-order.use-case';
 import { GetMyOrdersUseCase } from '../../application/use-cases/get-my-orders.use-case';
 import { UpdateOrderStatusUseCase } from '../../application/use-cases/update-order-status.use-case';
@@ -23,15 +24,19 @@ export class OrdersController {
 
   @Post()
   @ApiOperation({ summary: 'Create a new order (PICKUP / TABLE / DELIVERY)' })
-  async create(@CurrentUser() user: { id: string }, @Body() dto: CreateOrderDto) {
-    const order = await this.createOrder.execute({ userId: user.id, ...dto });
-    return OrderMapper.toResponse(order);
+  async create(@CurrentUser() user: JwtPayloadVo, @Body() dto: CreateOrderDto) {
+    const { order, pickup } = await this.createOrder.execute({
+      ...dto,
+      userId: user.sub,
+      slotTime: dto.slotTime ? new Date(dto.slotTime) : undefined,
+    });
+    return { ...OrderMapper.toResponse(order), pickup };
   }
 
   @Get('mine')
   @ApiOperation({ summary: 'Get current user order history' })
-  async myOrders(@CurrentUser() user: { id: string }) {
-    const orders = await this.getMyOrders.execute(user.id);
+  async myOrders(@CurrentUser() user: JwtPayloadVo) {
+    const orders = await this.getMyOrders.execute(user.sub);
     return OrderMapper.toResponseList(orders);
   }
 

@@ -6,11 +6,12 @@ export interface SlotAvailability {
   slots: string[]; // HH:MM times that are open
 }
 
-// Café is open 07:00–19:00; pickup every 15 min; max 8 orders per slot
-const OPEN_HOUR = 7;
-const CLOSE_HOUR = 19;
-const SLOT_INTERVAL_MIN = 15;
-const MAX_PER_SLOT = 8;
+// Café is open 07:00–19:00; pickup every 15 min; max 8 orders per slot.
+// Exported because booking a slot has to agree with listing them.
+export const OPEN_HOUR = 7;
+export const CLOSE_HOUR = 19;
+export const SLOT_INTERVAL_MIN = 15;
+export const MAX_PER_SLOT = 8;
 
 @Injectable()
 export class GetAvailableSlotsUseCase {

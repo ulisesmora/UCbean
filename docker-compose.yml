@@ -19,6 +19,7 @@ services:
     build:
       context: .
       dockerfile: apps/api/Dockerfile
+      network: host
     ports:
       - "3000:3000"
     environment:

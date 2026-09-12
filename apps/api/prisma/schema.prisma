@@ -43,21 +43,36 @@ enum ReservationStatus {
 }
 
 model User {
-  id            String   @id @default(uuid())
-  email         String   @unique
-  phone         String?  @unique
-  name          String
-  passwordHash  String
-  role          Role     @default(CUSTOMER)
-  refreshToken  String?
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
+  id           String   @id @default(uuid())
+  email        String   @unique
+  phone        String?  @unique
+  name         String
+  passwordHash String
+  role         Role     @default(CUSTOMER)
+  refreshToken String?
+
+  /// Cuándo se confirmó el correo. Nulo mientras no se valide.
+  emailVerifiedAt DateTime?
+  /// Solo día y mes importan, pero se guarda la fecha completa.
+  birthday        DateTime?
+  /// Consentimiento explícito para correo y SMS de publicidad.
+  /// Los avisos de un pedido no dependen de esto: son del servicio.
+  marketingOptIn  Boolean   @default(false)
+
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
 
   addresses         Address[]
   orders            Order[]
   notifications     Notification[]
   paymentMethods    PaymentMethod[]
   tableReservations TableReservation[]
+  loyaltyCard         LoyaltyCard?
+  discounts           Discount[]
+  discountRedemptions DiscountRedemption[]
+  pushSubscriptions   PushSubscription[]
+  campaignDeliveries  CampaignDelivery[]
+  verificationTokens  VerificationToken[]
 }
 
 model Address {
@@ -106,11 +121,11 @@ model Order {
   createdAt         DateTime    @default(now())
   updatedAt         DateTime    @updatedAt
 
-  user            User               @relation(fields: [userId], references: [id])
-  deliveryAddress Address?           @relation(fields: [deliveryAddressId], references: [id])
-  items           OrderItem[]
-  statusHistory   OrderStatusHistory[]
-  payment         Payment?
+  user              User                 @relation(fields: [userId], references: [id])
+  deliveryAddress   Address?             @relation(fields: [deliveryAddressId], references: [id])
+  items             OrderItem[]
+  statusHistory     OrderStatusHistory[]
+  payment           Payment?
   pickupReservation PickupReservation?
 }
 
@@ -120,6 +135,19 @@ model OrderItem {
   productId String
   qty       Int
   unitPrice Decimal @db.Decimal(10, 2)
+
+  /// The formula this line was built from: beans, size, serve, milk, foam,
+  /// art, extras, vessel and sleeve. Same shape the configurator produces and
+  /// the 3D preview renders, so a menu drink and a custom one are one record.
+  options Json?
+
+  /// Which menu recipe it came from, or null when the customer built it.
+  recipeId String?
+
+  /// What the customer was shown when they ordered, so a later price or
+  /// recipe change never rewrites history.
+  nameSnapshot   String?
+  ticketSnapshot String?
 
   order   Order   @relation(fields: [orderId], references: [id], onDelete: Cascade)
   product Product @relation(fields: [productId], references: [id])
@@ -205,10 +233,314 @@ model Notification {
   id      String              @id @default(uuid())
   userId  String
   channel NotificationChannel
+  /// Para qué es, así la cuenta puede filtrar y el cliente puede
+  /// silenciar publicidad sin perder los avisos de su pedido.
+  type    NotificationType    @default(ORDER)
   title   String
   body    String
+  /// A qué apunta el aviso, cuando apunta a algo.
+  orderId String?
   isRead  Boolean             @default(false)
   sentAt  DateTime            @default(now())
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, isRead])
+}
+
+// ─────────────────────────────────────────────────────────────
+// Recetas
+//
+// Las bebidas vivían en un archivo del frontend, así que cambiar
+// una de temporada exigía un despliegue. Aquí una receta es una
+// fórmula guardada: el mismo objeto que produce el configurador
+// y que se copia en la línea de pedido.
+// ─────────────────────────────────────────────────────────────
+
+enum RecipeKind {
+  SIGNATURE
+  SEASONAL
+}
+
+model Recipe {
+  id     String     @id @default(uuid())
+  /// Identificador estable que viaja en OrderItem.recipeId.
+  slug   String     @unique
+  name   String
+  /// Nombre en su escritura original, cuando la bebida lo tiene.
+  accent String?
+  kind   RecipeKind @default(SIGNATURE)
+  note   String
+
+  /// La fórmula. Misma forma que OrderItem.options, así que el
+  /// precio sale de la misma función y nunca se teclea.
+  build Json
+
+  season    String?
+  /// Vigencia de una bebida de temporada. Nulo significa siempre.
+  activeFrom DateTime?
+  activeTo   DateTime?
+  isActive   Boolean   @default(true)
+  sortOrder  Int       @default(0)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([kind, isActive])
+}
+
+// ─────────────────────────────────────────────────────────────
+// Lealtad
+//
+// El saldo no se guarda: se suma del libro de movimientos. Un
+// contador mutable se desincroniza en cuanto algo falla a medias,
+// y «tienes tantos puntos» es un número que el cliente va a creer.
+// ─────────────────────────────────────────────────────────────
+
+enum PointsReason {
+  ORDER
+  SIGNUP
+  BIRTHDAY
+  REDEMPTION
+  MANUAL
+  EXPIRY
+}
+
+enum RedemptionStatus {
+  PENDING
+  USED
+  CANCELLED
+}
+
+model LoyaltyCard {
+  id        String   @id @default(uuid())
+  userId    String   @unique
+  /// Sellos de la tarjeta de café, aparte de los puntos.
+  stamps    Int      @default(0)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user        User                @relation(fields: [userId], references: [id], onDelete: Cascade)
+  entries     PointsEntry[]
+  redemptions RewardRedemption[]
+}
+
+model PointsEntry {
+  id     String       @id @default(uuid())
+  cardId String
+  /// Positivo al ganar, negativo al canjear.
+  delta  Int
+  reason PointsReason
+  /// El pedido que lo generó, cuando lo hubo.
+  orderId String?
+  note    String?
+  createdAt DateTime @default(now())
+
+  card LoyaltyCard @relation(fields: [cardId], references: [id], onDelete: Cascade)
+
+  @@index([cardId, createdAt])
+}
+
+model Reward {
+  id          String   @id @default(uuid())
+  name        String
+  description String
+  /// Lo que cuesta en puntos.
+  cost        Int
+  isActive    Boolean  @default(true)
+  sortOrder   Int      @default(0)
+  createdAt   DateTime @default(now())
+
+  redemptions RewardRedemption[]
+}
+
+model RewardRedemption {
+  id       String           @id @default(uuid())
+  cardId   String
+  rewardId String
+  /// Lo que el cliente enseña en el mostrador.
+  code     String           @unique
+  status   RedemptionStatus @default(PENDING)
+  orderId  String?
+  usedAt   DateTime?
+  createdAt DateTime        @default(now())
+
+  card   LoyaltyCard @relation(fields: [cardId], references: [id], onDelete: Cascade)
+  reward Reward      @relation(fields: [rewardId], references: [id])
+
+  @@index([cardId, status])
+}
+
+// ─────────────────────────────────────────────────────────────
+// Descuentos
+//
+// Un descuento con userId nulo lo puede usar cualquiera. Con
+// userId es un regalo para esa persona: el de bienvenida, el de
+// cumpleaños. Una sola tabla porque la regla es la misma.
+// ─────────────────────────────────────────────────────────────
+
+enum DiscountKind {
+  PERCENT
+  AMOUNT
+}
+
+enum DiscountTrigger {
+  SIGNUP
+  BIRTHDAY
+  FIRST_APP_ORDER
+}
+
+model Discount {
+  id          String       @id @default(uuid())
+  code        String       @unique
+  description String
+  kind        DiscountKind
+  /// Porcentaje (0 a 100) o dinero, según kind.
+  value       Decimal      @db.Decimal(10, 2)
+
+  minOrderTotal  Decimal? @db.Decimal(10, 2)
+  /// Nulo significa sin tope global.
+  maxRedemptions Int?
+  perUserLimit   Int      @default(1)
+
+  startsAt DateTime?
+  endsAt   DateTime?
+  isActive Boolean   @default(true)
+
+  /// Cuando es un regalo personal, de quién es.
+  userId String?
+  /// Qué lo generó automáticamente, si algo lo hizo.
+  trigger DiscountTrigger?
+
+  createdAt DateTime @default(now())
+
+  user        User?                @relation(fields: [userId], references: [id], onDelete: Cascade)
+  redemptions DiscountRedemption[]
+
+  @@index([userId, isActive])
+}
+
+model DiscountRedemption {
+  id         String   @id @default(uuid())
+  discountId String
+  userId     String
+  orderId    String?
+  /// Lo que se descontó de verdad, ya calculado.
+  amount     Decimal  @db.Decimal(10, 2)
+  createdAt  DateTime @default(now())
+
+  discount Discount @relation(fields: [discountId], references: [id], onDelete: Cascade)
+  user     User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([discountId, userId])
+}
+
+// ─────────────────────────────────────────────────────────────
+// Avisos y campañas
+// ─────────────────────────────────────────────────────────────
+
+enum NotificationType {
+  ACCOUNT
+  ORDER
+  RESERVATION
+  LOYALTY
+  MARKETING
+}
+
+/// Suscripción del navegador a Web Push. Gratis y sin proveedor:
+/// solo hacen falta unas llaves VAPID generadas en local.
+model PushSubscription {
+  id        String   @id @default(uuid())
+  userId    String
+  endpoint  String   @unique
+  p256dh    String
+  auth      String
+  userAgent String?
+  createdAt DateTime @default(now())
+  lastUsedAt DateTime?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+}
+
+enum CampaignAudience {
+  ALL
+  WITH_POINTS
+  BIRTHDAY_MONTH
+  INACTIVE
+}
+
+enum CampaignStatus {
+  DRAFT
+  SCHEDULED
+  SENDING
+  SENT
+  FAILED
+}
+
+enum DeliveryStatus {
+  PENDING
+  SENT
+  FAILED
+  SKIPPED
+}
+
+model Campaign {
+  id       String              @id @default(uuid())
+  name     String
+  channel  NotificationChannel
+  audience CampaignAudience    @default(ALL)
+  subject  String?
+  /// Admite {{nombre}} y {{puntos}}, que se sustituyen por persona.
+  body     String
+  status   CampaignStatus      @default(DRAFT)
+
+  scheduledAt DateTime?
+  sentAt      DateTime?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  deliveries CampaignDelivery[]
+
+  @@index([status, scheduledAt])
+}
+
+model CampaignDelivery {
+  id         String         @id @default(uuid())
+  campaignId String
+  userId     String
+  status     DeliveryStatus @default(PENDING)
+  error      String?
+  sentAt     DateTime?
+  createdAt  DateTime       @default(now())
+
+  campaign Campaign @relation(fields: [campaignId], references: [id], onDelete: Cascade)
+  user     User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([campaignId, userId])
+}
+
+// ─────────────────────────────────────────────────────────────
+// Tokens de un solo uso
+// ─────────────────────────────────────────────────────────────
+
+enum TokenPurpose {
+  EMAIL_VERIFY
+  PASSWORD_RESET
+}
+
+model VerificationToken {
+  id        String       @id @default(uuid())
+  userId    String
+  /// Guardado como hash. El texto plano solo viaja en el correo.
+  tokenHash String       @unique
+  purpose   TokenPurpose
+  expiresAt DateTime
+  usedAt    DateTime?
+  createdAt DateTime     @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, purpose])
 }

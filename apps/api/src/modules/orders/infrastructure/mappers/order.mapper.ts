@@ -7,6 +7,10 @@ export class OrderItemResponseDto {
   @Expose() qty: number;
   @Expose() unitPrice: number;
   @Expose() subtotal: number;
+  @Expose() build: unknown;
+  @Expose() recipeId: string | null;
+  @Expose() name: string | null;
+  @Expose() ticket: string | null;
 }
 
 export class OrderResponseDto {

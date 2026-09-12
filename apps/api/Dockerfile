@@ -1,7 +1,7 @@
 FROM node:22-alpine AS builder
 WORKDIR /app
 
-RUN npm i -g pnpm
+RUN npm i -g pnpm@10.30.3
 
 COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
 COPY apps/api/package.json ./apps/api/
@@ -11,7 +11,8 @@ RUN pnpm install --frozen-lockfile
 
 COPY . .
 
-RUN pnpm --filter @ucbean/api db:generate
+ENV PRISMA_ENGINES_CHECKSUM_IGNORE_MISSING=1
+RUN for i in 1 2 3 4 5 6; do       pnpm --filter @ucbean/api db:generate && break;       echo "prisma generate failed (attempt $i), retrying in 10s";       sleep 10;     done;     pnpm --filter @ucbean/api db:generate
 RUN pnpm --filter @ucbean/api build
 
 # --- runner ---

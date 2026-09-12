@@ -20,6 +20,7 @@ const makeOrder = (status: OrderEntity['status']) =>
 describe('UpdateOrderStatusUseCase', () => {
   let useCase: UpdateOrderStatusUseCase;
   let repo: jest.Mocked<IOrderRepository>;
+  let events: { emit: jest.Mock };
 
   beforeEach(() => {
     repo = {
@@ -28,7 +29,8 @@ describe('UpdateOrderStatusUseCase', () => {
       create: jest.fn(),
       updateStatus: jest.fn(),
     };
-    useCase = new UpdateOrderStatusUseCase(repo);
+    events = { emit: jest.fn() };
+    useCase = new UpdateOrderStatusUseCase(repo, events as any);
   });
 
   it('transitions PENDING → CONFIRMED', async () => {

@@ -7,6 +7,7 @@ import { PrismaTableRepository } from './infrastructure/repositories/prisma-tabl
 import { GetAvailableSlotsUseCase } from './application/use-cases/get-available-slots.use-case';
 import { CreateTableReservationUseCase } from './application/use-cases/create-table-reservation.use-case';
 import { GetMyTableReservationsUseCase } from './application/use-cases/get-my-table-reservations.use-case';
+import { ReservePickupSlotUseCase } from './application/use-cases/reserve-pickup-slot.use-case';
 import { ReservationsController } from './presentation/controllers/reservations.controller';
 
 @Module({
@@ -18,6 +19,10 @@ import { ReservationsController } from './presentation/controllers/reservations.
     GetAvailableSlotsUseCase,
     CreateTableReservationUseCase,
     GetMyTableReservationsUseCase,
+    ReservePickupSlotUseCase,
   ],
+  // Orders books the pickup slot as part of placing an order, so it needs this
+  // one use case. Service to service, never repository to repository.
+  exports: [ReservePickupSlotUseCase],
 })
 export class ReservationsModule {}

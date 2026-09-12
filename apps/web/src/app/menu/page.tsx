@@ -5,19 +5,22 @@ export const metadata: Metadata = { title: 'Menu' };
 
 export default function MenuPage() {
   return (
-    <div className="max-w-6xl mx-auto px-5 py-12 md:py-16">
-      <p className="text-forest-600 text-xs font-bold tracking-[0.2em] uppercase mb-2">
-        What we brew
-      </p>
-      <h1 className="font-body font-extrabold text-4xl md:text-5xl text-stone2-900 mb-2">
-        The Menu
-      </h1>
-      <p className="text-stone2-600 text-[15px] mb-10 max-w-lg">
-        Single-origin beans, Korean-inspired drinks, and seasonal specials. Everything is made to
-        order.
-      </p>
+    <div className="bloom relative overflow-hidden">
+      <div className="mx-auto max-w-6xl px-6 py-20 md:py-28">
+        <p className="mb-5 inline-flex items-center gap-3 font-mono text-[11px] uppercase tracking-[0.24em] text-stone2-600">
+          <span className="h-2.5 w-2.5 bg-neon-500 ring-1 ring-stone2-900" />
+          What we brew
+        </p>
+        <h1 className="mb-5 text-4xl font-extrabold leading-[1.0] text-stone2-900 md:text-5xl">
+          The <span className="marker font-seal italic">menu.</span>
+        </h1>
+        <p className="mb-12 max-w-lg text-[16px] leading-relaxed text-stone2-600">
+          Single-origin beans, Korean-inspired drinks, and seasonal specials. Everything is made to
+          order.
+        </p>
 
-      <MenuClient />
+        <MenuClient />
+      </div>
     </div>
   );
 }

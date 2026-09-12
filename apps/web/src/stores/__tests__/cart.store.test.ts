@@ -1,6 +1,7 @@
 import { describe, it, expect, beforeEach } from 'vitest';
 import { act } from '@testing-library/react';
 import { useCartStore } from '../cart.store';
+import { DEFAULT_BUILD } from '@/lib/builder';
 import type { Product } from '@/types/api.types';
 
 const makeProduct = (overrides?: Partial<Product>): Product => ({
@@ -37,6 +38,41 @@ describe('cart store', () => {
     });
     expect(useCartStore.getState().items).toHaveLength(1);
     expect(useCartStore.getState().items[0].qty).toBe(2);
+  });
+
+  it('keeps two differently built drinks as separate lines', () => {
+    const p = makeProduct();
+    act(() => {
+      useCartStore.getState().addItem(p, { build: { ...DEFAULT_BUILD, art: 'heart' } });
+      useCartStore.getState().addItem(p, { build: { ...DEFAULT_BUILD, art: 'swan' } });
+      useCartStore.getState().addItem(p, { build: { ...DEFAULT_BUILD, art: 'heart' } });
+    });
+    const { items } = useCartStore.getState();
+    expect(items).toHaveLength(2);
+    // The two hearts are one drink ordered twice, the swan is its own line.
+    expect(items.find((i) => i.build?.art === 'heart')?.qty).toBe(2);
+    expect(items.find((i) => i.build?.art === 'swan')?.qty).toBe(1);
+  });
+
+  it('treats the same choices made in a different order as one line', () => {
+    const p = makeProduct();
+    act(() => {
+      useCartStore.getState().addItem(p, {
+        build: { ...DEFAULT_BUILD, extras: ['sugar', 'cinnamon'] },
+      });
+      useCartStore.getState().addItem(p, {
+        build: { ...DEFAULT_BUILD, extras: ['cinnamon', 'sugar'] },
+      });
+    });
+    expect(useCartStore.getState().items).toHaveLength(1);
+  });
+
+  it('prices a built drink by its formula, not by the catalogue row', () => {
+    // The anchor product is free; the build is what costs money.
+    act(() => {
+      useCartStore.getState().addItem(makeProduct({ price: 0 }), { build: DEFAULT_BUILD });
+    });
+    expect(useCartStore.getState().totalPrice()).toBeGreaterThan(0);
   });
 
   it('removes an item', () => {

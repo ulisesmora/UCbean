@@ -14,10 +14,10 @@ import { toast } from 'sonner';
 function LeafLogo() {
   return (
     <svg width="30" height="30" viewBox="0 0 30 30" fill="none" xmlns="http://www.w3.org/2000/svg">
-      <circle cx="15" cy="15" r="13" stroke="#406c37" strokeWidth="1.4" />
-      <ellipse cx="15" cy="15" rx="6" ry="13" stroke="#406c37" strokeWidth="1.4" />
-      <line x1="2" y1="10.5" x2="28" y2="10.5" stroke="#406c37" strokeWidth="1.4" />
-      <line x1="2" y1="19.5" x2="28" y2="19.5" stroke="#406c37" strokeWidth="1.4" />
+      <circle cx="15" cy="15" r="13" stroke="#0A0A0A" strokeWidth="1.4" />
+      <ellipse cx="15" cy="15" rx="6" ry="13" stroke="#0A0A0A" strokeWidth="1.4" />
+      <line x1="2" y1="10.5" x2="28" y2="10.5" stroke="#0A0A0A" strokeWidth="1.4" />
+      <line x1="2" y1="19.5" x2="28" y2="19.5" stroke="#0A0A0A" strokeWidth="1.4" />
     </svg>
   );
 }
@@ -48,10 +48,8 @@ export function Header() {
     <>
       <header
         className={cn(
-          'sticky top-0 z-40 transition-all duration-300',
-          scrolled
-            ? 'bg-birch-50/95 backdrop-blur-md border-b border-birch-200 shadow-sm'
-            : 'bg-birch-50',
+          'glass-bar sticky top-0 z-40 border-b-2 border-stone2-900 transition-shadow duration-300',
+          scrolled && 'shadow-[0_10px_30px_-24px_rgba(10,10,10,0.7)]',
         )}
       >
         <div className="max-w-6xl mx-auto px-5 h-16 flex items-center justify-between gap-4">
@@ -59,27 +57,27 @@ export function Header() {
           <Link href="/" className="flex items-center gap-2.5 shrink-0">
             <LeafLogo />
             <div className="leading-tight">
-              <p className="font-body font-bold text-[15px] text-stone2-900 tracking-tight">
+              <p className="text-[15px] font-semibold tracking-tight text-stone2-900">
                 Around the Bean
               </p>
-              <p className="text-[9px] font-semibold tracking-[0.18em] text-forest-600 uppercase">
+              <p className="text-[9px] uppercase tracking-[0.18em] text-stone2-400">
                 · UBC Vancouver ·
               </p>
             </div>
           </Link>
 
           {/* Desktop nav */}
-          <nav className="hidden md:flex items-center gap-6 text-[13px] font-semibold text-stone2-600">
-            <Link href="/menu" className="hover:text-stone2-900 transition-colors">
+          <nav className="hidden items-center gap-7 text-[14px] text-stone2-600 md:flex">
+            <Link href="/menu" className="transition-colors hover:text-stone2-900">
               Menu
             </Link>
-            <Link href="/pickup" className="hover:text-stone2-900 transition-colors">
+            <Link href="/pickup" className="transition-colors hover:text-stone2-900">
               Order &amp; Pickup
             </Link>
-            <Link href="/table" className="hover:text-stone2-900 transition-colors">
+            <Link href="/table" className="transition-colors hover:text-stone2-900">
               Reserve
             </Link>
-            <Link href="/about" className="hover:text-stone2-900 transition-colors">
+            <Link href="/about" className="transition-colors hover:text-stone2-900">
               Visit
             </Link>
           </nav>
@@ -88,16 +86,13 @@ export function Header() {
           <div className="flex items-center gap-2">
             {isAuthenticated ? (
               <div className="hidden md:flex items-center gap-2">
-                <Link
-                  href="/profile"
-                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-full border border-birch-200 text-stone2-600 text-xs font-semibold hover:bg-birch-100 transition-colors"
-                >
+                <Link href="/profile" className="btn px-4 py-2 text-[13px]">
                   <User size={13} />
                   {user?.name?.split(' ')[0]}
                 </Link>
                 <button
                   onClick={handleLogout}
-                  className="text-xs text-stone2-400 hover:text-stone2-600 transition-colors px-2"
+                  className="px-2 text-[13px] text-stone2-400 transition-colors hover:text-stone2-600"
                 >
                   Sign out
                 </button>
@@ -105,7 +100,7 @@ export function Header() {
             ) : (
               <button
                 onClick={() => setShowAuth(true)}
-                className="hidden md:inline-flex items-center px-4 py-1.5 rounded-full border border-forest-700 text-forest-700 text-xs font-semibold hover:bg-forest-50 transition-colors"
+                className="btn hidden px-5 py-2 text-[13px] md:inline-flex"
               >
                 Sign in
               </button>

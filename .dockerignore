@@ -1,0 +1,35 @@
+# Without this the build context was shipping 1.16GB of installed packages
+# and build output to the daemon on every `docker compose build`.
+node_modules
+**/node_modules
+
+# Build output — the image rebuilds these itself.
+dist
+**/dist
+.next
+**/.next
+out
+**/out
+
+# Never bake local secrets into an image layer.
+.env
+.env.*
+!.env.example
+**/.env
+**/.env.*
+!**/.env.example
+
+.git
+.github
+.vscode
+.idea
+
+# Reference material, not application code.
+prototype-design
+
+*.log
+npm-debug.log*
+coverage
+**/coverage
+.DS_Store
+Thumbs.db

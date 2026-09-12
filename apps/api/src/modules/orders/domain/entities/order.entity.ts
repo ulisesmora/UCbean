@@ -1,3 +1,5 @@
+import type { DrinkBuild } from '../value-objects/drink-build';
+
 export type OrderStatus =
   'PENDING' | 'CONFIRMED' | 'PREPARING' | 'READY' | 'COMPLETED' | 'CANCELLED';
 export type OrderType = 'PICKUP' | 'DELIVERY' | 'TABLE';
@@ -8,6 +10,17 @@ export class OrderItemEntity {
     public readonly productId: string,
     public readonly qty: number,
     public readonly unitPrice: number,
+    /** How this drink was made. Null for anything not built in the configurator. */
+    public readonly build: DrinkBuild | null = null,
+    /** The menu recipe it came from, null when the customer built it. */
+    public readonly recipeId: string | null = null,
+    /**
+     * What the customer saw when they ordered. Snapshotted rather than joined,
+     * because a product can be renamed or repriced and an old ticket should
+     * still read the way it did on the day.
+     */
+    public readonly name: string | null = null,
+    public readonly ticket: string | null = null,
   ) {}
 
   get subtotal(): number {

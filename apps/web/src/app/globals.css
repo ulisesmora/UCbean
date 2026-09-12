@@ -4,43 +4,67 @@
 
 @layer base {
   :root {
+    color-scheme: light;
+
     /* Brand tokens */
     --font-body:    'Plus Jakarta Sans', system-ui, sans-serif;
     --font-display: 'Playfair Display',  Georgia,   serif;
+    --font-seal:    'Hahmlet',            Georgia,   serif;
+    --font-mono:    'JetBrains Mono',     ui-monospace, monospace;
 
-    /* shadcn semantic tokens — mapped to UCBean palette */
-    --background:        40 60% 97%;   /* birch-50  #faf7f1 */
-    --foreground:        22 56% 8%;    /* stone2-900 #1e1208 */
-    --card:              40 60% 97%;
-    --card-foreground:   22 56% 8%;
-    --popover:           40 60% 97%;
-    --popover-foreground: 22 56% 8%;
-    --primary:           110 33% 32%; /* forest-700 #406c37 */
-    --primary-foreground: 40 60% 97%;
-    --secondary:         37 44% 90%;  /* birch-100  #f0e9da */
-    --secondary-foreground: 22 56% 8%;
-    --muted:             37 44% 90%;
-    --muted-foreground:  30 11% 38%;  /* stone2-600 #6b6358 */
-    --accent:            33 44% 59%;  /* bark-400   #c49868 */
-    --accent-foreground: 22 56% 8%;
-    --destructive:       0 72% 51%;
-    --destructive-foreground: 40 60% 97%;
-    --border:            35 36% 82%;  /* birch-200  #e3d5c0 */
-    --input:             35 36% 82%;
-    --ring:              110 33% 32%; /* forest-700 */
-    --radius:            0.75rem;
+    --ink:     #0A0A0A;
+    --acid:    47 232 107;   /* fill only — never type on white */
+    --ember:   255 90 24;
+    --paper:   #F7F7F4;
+
+    /* shadcn semantic tokens */
+    --background:        0 0% 100%;
+    --foreground:        0 0% 4%;
+    --card:              0 0% 100%;
+    --card-foreground:   0 0% 4%;
+    --popover:           0 0% 100%;
+    --popover-foreground: 0 0% 4%;
+    --primary:           142 82% 55%;
+    --primary-foreground: 0 0% 4%;
+    --secondary:         60 8% 95%;
+    --secondary-foreground: 0 0% 4%;
+    --muted:             60 8% 95%;
+    --muted-foreground:  60 3% 29%;
+    --accent:            17 100% 55%;
+    --accent-foreground: 0 0% 4%;
+    --destructive:       17 100% 55%;
+    --destructive-foreground: 0 0% 100%;
+    --border:            0 0% 4%;
+    --input:             0 0% 4%;
+    --ring:              142 74% 26%;
+    --radius:            0rem;
   }
 
   html {
     scroll-behavior: smooth;
     -webkit-tap-highlight-color: transparent;
-    background-color: hsl(var(--background));
+    background-color: #ffffff;
   }
 
   body {
     font-family: var(--font-body);
-    background-color: hsl(var(--background));
-    color: hsl(var(--foreground));
+    background-color: #ffffff;
+    color: var(--ink);
+  }
+
+  /* Brutalism sets type tight and heavy. */
+  h1, h2, h3 {
+    letter-spacing: -0.03em;
+  }
+
+  :focus-visible {
+    outline: 3px solid var(--ink);
+    outline-offset: 3px;
+  }
+
+  ::selection {
+    background: rgb(var(--acid));
+    color: var(--ink);
   }
 
   .pb-safe { padding-bottom: max(env(safe-area-inset-bottom), 0.5rem); }
@@ -49,14 +73,222 @@
 @layer utilities {
   .tap-target { min-height: 44px; min-width: 44px; }
 
+  /* ── Structure ────────────────────────────────────────────
+     The grid is drawn in ink and never apologises for it. */
+
+  .rule      { border: 2px solid var(--ink); }
+  .rule-thin { border: 1px solid var(--ink); }
+
+  /* Offset slab, for cards. The shadow is a solid shape, not a blur. */
+  .slab {
+    border: 2px solid var(--ink);
+    border-radius: 5px;
+    background: #ffffff;
+    transition: background-color 160ms ease;
+  }
+  .slab-hover:hover { background: var(--paper); }
+
+  /* Same slab, filled. For stamps and badges, which are labels, not controls. */
+  .slab-acid {
+    border: 2px solid var(--ink);
+    border-radius: 5px;
+    background: #ffffff;
+    color: var(--ink);
+  }
+
+  /* ── Buttons ──────────────────────────────────────────────
+     The slab, refined. Modern reads as behaviour, not ornament:
+     it lifts towards you on hover and on press it drops the full
+     way into its own shadow, which lands flush with the page. */
+
+  .btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    border: 2px solid var(--ink);
+    border-radius: 5px;
+    background: #ffffff;
+    color: var(--ink);
+    font-weight: 600;
+    letter-spacing: -0.006em;
+    box-shadow: 4px 4px 0 0 var(--ink);
+    transition: transform 140ms cubic-bezier(0.2, 0.8, 0.3, 1),
+                box-shadow 140ms cubic-bezier(0.2, 0.8, 0.3, 1),
+                background-color 140ms ease;
+  }
+  .btn:hover {
+    transform: translate(-2px, -2px);
+    box-shadow: 6px 6px 0 0 var(--ink);
+  }
+  /* Exit is quicker than entry, so the press feels answered, not sluggish. */
+  .btn:active {
+    transform: translate(4px, 4px);
+    box-shadow: 0 0 0 0 var(--ink);
+    transition-duration: 80ms;
+  }
+
+  .btn-acid { background: rgb(var(--acid)); }
+  .btn-acid:hover { background: #4CF184; }
+
+  .btn-ink {
+    background: var(--ink);
+    color: rgb(var(--acid));
+  }
+  .btn-ink:hover { background: #1C1C1C; }
+
+  /* Exposed grid, faint enough to read as paper rule. */
+  .blueprint {
+    background-image:
+      linear-gradient(to right, rgba(10, 10, 10, 0.028) 1px, transparent 1px),
+      linear-gradient(to bottom, rgba(10, 10, 10, 0.028) 1px, transparent 1px);
+    background-size: 88px 88px;
+  }
+
+  /* ── Neon on paper ────────────────────────────────────────
+     Green cannot be ink here, so it becomes mass: a highlighter
+     stroke behind the word, or a bloom bleeding under the page. */
+
+  /* Highlighter behind live text. The text stays near-black. */
+  .marker {
+    position: relative;
+    display: inline;
+    background-image: linear-gradient(rgb(var(--acid)), rgb(var(--acid)));
+    background-repeat: no-repeat;
+    background-size: 100% 0.42em;
+    background-position: 0 78%;
+    padding: 0 0.08em;
+  }
+
+  .marker-ember {
+    background-image: linear-gradient(rgb(var(--ember) / 0.8), rgb(var(--ember) / 0.8));
+  }
+
+  /* ── Liquid glass ─────────────────────────────────────────
+     Frosted panel with an ink outline. The blur is what makes it
+     glass; the hard border is what keeps it brutalist. It only
+     reads as glass when a bloom is drifting behind it, so these
+     belong on sections that carry one. */
+
+  .glass {
+    /* Less white, more blur. The panel should show what is behind it, not
+       hide it, which is the whole point of the material. */
+    background-color: rgba(255, 255, 255, 0.22);
+    backdrop-filter: blur(40px) saturate(300%) brightness(1.08);
+    -webkit-backdrop-filter: blur(40px) saturate(300%) brightness(1.08);
+    border: 2px solid var(--ink);
+    border-radius: 5px;
+    box-shadow:
+      /* lit top edge */
+      inset 0 2px 0 rgba(255, 255, 255, 1),
+      /* light pooling down the inside face */
+      inset 0 14px 28px -14px rgba(255, 255, 255, 0.95),
+      /* the panel's own weight, caught under the bottom edge */
+      inset 0 -10px 22px -18px rgba(10, 10, 10, 0.45),
+      0 14px 34px -26px rgba(10, 10, 10, 0.5);
+    transition: background-color 240ms ease, backdrop-filter 240ms ease;
+  }
+  .glass-hover:hover {
+    background-color: rgba(255, 255, 255, 0.46);
+    backdrop-filter: blur(38px) saturate(270%) brightness(1.09);
+    -webkit-backdrop-filter: blur(38px) saturate(270%) brightness(1.09);
+  }
+
+  /* Thinner film, for chrome that floats over scrolling content. */
+  .glass-bar {
+    background-color: rgba(255, 255, 255, 0.52);
+    backdrop-filter: blur(34px) saturate(220%) brightness(1.04);
+    -webkit-backdrop-filter: blur(34px) saturate(220%) brightness(1.04);
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.9);
+  }
+
+  /* Refraction, painted as background layers rather than a pseudo-element:
+     an ::after needs `position: relative` on the host, which silently
+     overrode the `absolute` utility on every floating panel. */
+  .glass-edge {
+    background-image:
+      /* diagonal sheen across the face */
+      linear-gradient(
+        138deg,
+        rgba(255, 255, 255, 0.9) 0%,
+        rgba(255, 255, 255, 0.22) 22%,
+        rgba(255, 255, 255, 0) 42%,
+        rgba(255, 255, 255, 0) 62%,
+        rgba(255, 255, 255, 0.3) 86%,
+        rgba(255, 255, 255, 0.72) 100%
+      ),
+      /* the bright rim where light enters the top-left corner */
+      radial-gradient(
+        120% 90% at 0% 0%,
+        rgba(255, 255, 255, 0.55),
+        transparent 46%
+      );
+  }
+
+  /* One drifting stain fixed to the viewport, behind every page. Sections
+     that want more stack their own `.bloom` on top of it. */
+  .page-bloom::before {
+    content: '';
+    position: fixed;
+    inset: -10%;
+    z-index: -1;
+    pointer-events: none;
+    filter: blur(110px);
+    opacity: 0.4;
+    background:
+      radial-gradient(34% 40% at 12% 18%, rgb(var(--acid) / 0.85), transparent 68%),
+      radial-gradient(30% 34% at 88% 74%, rgb(var(--ember) / 0.45), transparent 68%);
+    animation: drift 34s ease-in-out infinite;
+  }
+
+  /* Colour blooming up through the paper, out of focus. */
+  .bloom { position: relative; isolation: isolate; }
+  .bloom::before {
+    content: '';
+    position: absolute;
+    inset: -15% -8%;
+    z-index: -1;
+    pointer-events: none;
+    filter: blur(84px);
+    opacity: 0.68;
+    background:
+      radial-gradient(38% 44% at 16% 24%, rgb(var(--acid) / 0.9), transparent 70%),
+      radial-gradient(30% 36% at 84% 70%, rgb(var(--ember) / 0.45), transparent 70%);
+    animation: drift 24s ease-in-out infinite;
+  }
+  .bloom-alt::before {
+    background:
+      radial-gradient(40% 46% at 82% 20%, rgb(var(--acid) / 0.8), transparent 70%),
+      radial-gradient(28% 34% at 18% 76%, rgb(var(--ember) / 0.4), transparent 70%);
+    animation-duration: 30s;
+    animation-direction: reverse;
+  }
+
   .ticker-track {
     display: flex;
     white-space: nowrap;
-    animation: ticker 32s linear infinite;
+    animation: ticker 38s linear infinite;
     gap: 3rem;
   }
   @keyframes ticker {
     from { transform: translateX(0); }
     to   { transform: translateX(-50%); }
   }
+}
+
+@supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+  .glass, .glass-bar { background: rgba(255, 255, 255, 0.92); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .bloom::before,
+  .page-bloom::before,
+  .ticker-track,
+  .animate-drift,
+  .animate-rise {
+    animation: none !important;
+  }
+  .btn:hover,
+  .btn:active { transform: none; }
+  html { scroll-behavior: auto; }
 }

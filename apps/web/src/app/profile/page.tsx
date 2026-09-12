@@ -63,7 +63,7 @@ export default function ProfilePage() {
           <p className="text-stone2-400 text-sm mb-6">View your orders and reservations.</p>
           <Button
             onClick={() => setShowAuth(true)}
-            className="bg-forest-700 hover:bg-forest-800 text-white"
+            className="bg-neon-500 hover:bg-neon-600 text-stone2-900"
           >
             Sign in
           </Button>
@@ -105,7 +105,7 @@ export default function ProfilePage() {
         {loadingOrders ? (
           <div className="space-y-3">
             {[1, 2].map((i) => (
-              <Skeleton key={i} className="h-20 rounded-xl" />
+              <Skeleton key={i} className="h-20 " />
             ))}
           </div>
         ) : orders.length === 0 ? (
@@ -113,7 +113,7 @@ export default function ProfilePage() {
         ) : (
           <div className="space-y-3">
             {orders.map((order) => (
-              <div key={order.id} className="p-4 bg-white rounded-xl border border-birch-200">
+              <div key={order.id} className="p-4 glass glass-edge">
                 <div className="flex items-center justify-between mb-2">
                   <span className="text-xs text-stone2-400">
                     {new Date(order.createdAt).toLocaleDateString('en-CA', {
@@ -152,7 +152,7 @@ export default function ProfilePage() {
         {loadingRes ? (
           <div className="space-y-3">
             {[1].map((i) => (
-              <Skeleton key={i} className="h-16 rounded-xl" />
+              <Skeleton key={i} className="h-16 " />
             ))}
           </div>
         ) : reservations.length === 0 ? (
@@ -160,7 +160,7 @@ export default function ProfilePage() {
         ) : (
           <div className="space-y-3">
             {reservations.map((r) => (
-              <div key={r.id} className="p-4 bg-white rounded-xl border border-birch-200">
+              <div key={r.id} className="p-4 glass glass-edge">
                 <div className="flex items-center justify-between">
                   <div>
                     <p className="text-sm font-semibold text-stone2-900">
