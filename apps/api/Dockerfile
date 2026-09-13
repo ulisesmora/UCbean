@@ -12,7 +12,12 @@ RUN pnpm install --frozen-lockfile
 COPY . .
 
 ENV PRISMA_ENGINES_CHECKSUM_IGNORE_MISSING=1
-RUN for i in 1 2 3 4 5 6; do       pnpm --filter @ucbean/api db:generate && break;       echo "prisma generate failed (attempt $i), retrying in 10s";       sleep 10;     done;     pnpm --filter @ucbean/api db:generate
+# `prisma generate` only reads the schema, it never connects. But the schema
+# reads DATABASE_URL, and Railway does not expose service variables while
+# building, so generate failed on every attempt. A placeholder exists for this
+# step only: it is not an ENV, so it never reaches the final image. The real
+# URL arrives at runtime, where `migrate deploy` uses it.
+RUN export DATABASE_URL="postgresql://build:build@localhost:5432/build";     for i in 1 2 3; do       pnpm --filter @ucbean/api db:generate && exit 0;       echo "prisma generate failed (attempt $i), retrying in 10s";       sleep 10;     done;     exit 1
 RUN pnpm --filter @ucbean/api build
 
 # --- runner ---
