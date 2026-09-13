@@ -335,3 +335,23 @@
   .btn:active { transform: none; }
   html { scroll-behavior: auto; }
 }
+
+/* A drink turning: one sprite sheet of 16 frames, stepped frame by frame. */
+.drink-sprite {
+  background-repeat: no-repeat;
+  background-position-x: 0%;
+  animation:
+    drink-spin 2.8s steps(15, jump-none) infinite,
+    drink-in 400ms ease-out;
+}
+@keyframes drink-spin {
+  from { background-position-x: 0%; }
+  to { background-position-x: 100%; }
+}
+@keyframes drink-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .drink-sprite { animation: none; }
+}

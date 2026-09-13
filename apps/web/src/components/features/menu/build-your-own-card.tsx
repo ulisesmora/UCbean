@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { ArrowRight, Sparkles } from 'lucide-react';
-import { Photo } from '@/components/ui/photo';
+import { DrinkThumb } from '@/components/features/builder/drink-thumb';
 import { DEFAULT_BUILD, priceOf } from '@/lib/builder';
 import { usePriceBook } from '@/lib/price-book';
 
@@ -26,12 +26,11 @@ export function BuildYourOwnCard() {
       href="/build"
       className="glass glass-edge glass-hover group flex flex-col overflow-hidden sm:col-span-2 md:flex-row"
     >
-      <Photo
-        src="espresso-pull.jpg"
-        label="Build your own"
-        alt="An espresso being pulled at the bar"
-        className="aspect-[4/3] w-full border-b-2 border-stone2-900 md:aspect-auto md:min-h-[260px] md:w-1/2 md:border-b-0 md:border-r-2"
-        sizes="(max-width: 768px) 100vw, 33vw"
+      {/* Prepared drinks turning in 3D, a new one every few seconds. */}
+      <DrinkThumb
+        fallback="/photos/espresso-pull.jpg"
+        alt="Drinks you can build, turning one after another"
+        className="aspect-[4/3] w-full border-b-2 border-stone2-900 bg-birch-100 md:aspect-auto md:min-h-[260px] md:w-1/2 md:border-b-0 md:border-r-2"
       />
       <div className="flex min-w-0 flex-1 flex-col gap-3 p-5 md:p-6">
         <p className="flex items-center gap-2 text-[11px] font-semibold uppercase tracking-[0.18em] text-forest-700">

@@ -250,7 +250,14 @@ export const authApi = {
   register: (body: { name: string; email: string; password: string; phone?: string }) =>
     api.post<AuthResponse>('/auth/register', body),
   login: (body: { email: string; password: string }) => api.post<AuthResponse>('/auth/login', body),
-  logout: () => api.post<void>('/auth/logout', {}),
+  // The endpoint is guarded: without the bearer it answered 401 and the
+  // session was never cleared.
+  logout: (token: string | null) =>
+    api.post<void>(
+      '/auth/logout',
+      {},
+      token ? { headers: { Authorization: `Bearer ${token}` } } : undefined,
+    ),
   me: (token: string) =>
     api.get<User>('/users/me', { headers: { Authorization: `Bearer ${token}` } }),
 

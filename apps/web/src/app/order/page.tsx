@@ -7,6 +7,7 @@ import { ArrowRight, Coffee, Heart, History, Plus, RotateCcw } from 'lucide-reac
 import { toast } from 'sonner';
 import { favoritesApi, ordersApi } from '@/lib/api';
 import { productImage } from '@/lib/images';
+import { DrinkThumb } from '@/components/features/builder/drink-thumb';
 import { usualsFrom, type Usual } from '@/lib/usuals';
 import type { Build } from '@/lib/builder';
 import { useAuthStore } from '@/stores/auth.store';
@@ -294,12 +295,21 @@ function UsualHero({
     <section aria-labelledby="usual-heading" className="glass glass-edge overflow-hidden">
       <div className="grid sm:grid-cols-[minmax(0,240px)_minmax(0,1fr)]">
         <div className="relative aspect-[4/3] border-b-2 border-stone2-900 bg-birch-100 sm:aspect-auto sm:min-h-[240px] sm:border-b-0 sm:border-r-2">
-          {/* eslint-disable-next-line @next/next/no-img-element -- same source as the bag and history */}
-          <img
-            src={productImage(product ?? { name: label, imageUrl: item.imageUrl })}
-            alt={label}
-            className="absolute inset-0 h-full w-full object-cover"
-          />
+          {item.build ? (
+            <DrinkThumb
+              build={item.build as Build}
+              fallback={productImage(product ?? { name: label, imageUrl: item.imageUrl })}
+              alt={label}
+              className="absolute inset-0 h-full w-full"
+            />
+          ) : (
+            // eslint-disable-next-line @next/next/no-img-element -- same source as the bag and history
+            <img
+              src={productImage(product ?? { name: label, imageUrl: item.imageUrl })}
+              alt={label}
+              className="absolute inset-0 h-full w-full object-cover"
+            />
+          )}
         </div>
 
         <div className="flex min-w-0 flex-col gap-2 p-5 md:p-6">
@@ -342,11 +352,15 @@ function UsualHero({
   );
 }
 
-function Thumb({ src, alt }: { src: string; alt: string }) {
+function Thumb({ src, alt, build }: { src: string; alt: string; build?: Build | null }) {
   return (
     <span className="relative h-14 w-14 shrink-0 overflow-hidden rounded-[10px] border-2 border-stone2-900 bg-birch-100">
-      {/* eslint-disable-next-line @next/next/no-img-element -- same source as the bag and history */}
-      <img src={src} alt={alt} loading="lazy" className="h-full w-full object-cover" />
+      {build ? (
+        <DrinkThumb build={build} fallback={src} alt={alt} className="h-full w-full" />
+      ) : (
+        // eslint-disable-next-line @next/next/no-img-element -- same source as the bag and history
+        <img src={src} alt={alt} loading="lazy" className="h-full w-full object-cover" />
+      )}
     </span>
   );
 }
@@ -365,7 +379,11 @@ function UsualRow({
 
   return (
     <li className="glass glass-edge flex items-center gap-3 p-3">
-      <Thumb src={productImage(product ?? { name: label, imageUrl: item.imageUrl })} alt={label} />
+      <Thumb
+        src={productImage(product ?? { name: label, imageUrl: item.imageUrl })}
+        alt={label}
+        build={item.build as Build | null}
+      />
       <div className="min-w-0 flex-1">
         <p className="truncate text-[15px] font-bold text-stone2-900">{label}</p>
         {item.ticket && (
@@ -401,7 +419,11 @@ function SavedRow({
 }) {
   return (
     <li className="glass glass-edge flex items-center gap-3 p-3">
-      <Thumb src={productImage(product ?? { name: fav.name })} alt={fav.name} />
+      <Thumb
+        src={productImage(product ?? { name: fav.name })}
+        alt={fav.name}
+        build={fav.build as Build}
+      />
       <div className="min-w-0 flex-1">
         <p className="flex items-center gap-1.5 truncate text-[15px] font-bold text-stone2-900">
           <Heart size={12} className="shrink-0 text-bark-700" fill="currentColor" />
@@ -438,6 +460,7 @@ function RepeatOrder({ order, catalogue }: { order: Order; catalogue: Map<string
         {order.items.slice(0, 4).map((i, n) => (
           <Thumb
             key={n}
+            build={i.build as Build | null}
             src={productImage(
               catalogue.get(i.productId) ?? { name: i.name ?? i.productName, imageUrl: i.imageUrl },
             )}

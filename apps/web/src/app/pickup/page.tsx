@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { Clock, Zap } from 'lucide-react';
+import { Clock, Zap, Check } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
 import { reservationsApi } from '@/lib/api';
 import { useAuthStore } from '@/stores/auth.store';
@@ -71,8 +71,12 @@ export default function PickupPage() {
                 setSelectedSlot(null);
               }}
               aria-pressed={modo === 'asap'}
-              className={`glass glass-edge tap-target mb-4 flex w-full items-center gap-3 p-4 text-left transition-colors ${
-                modo === 'asap' ? 'bg-neon-500/70' : 'glass-hover'
+              // Chosen, it turns solid green with a check. A faint tint over the
+              // glass sheen was too easy to miss.
+              className={`tap-target mb-4 flex w-full items-center gap-3 p-4 text-left transition-colors ${
+                modo === 'asap'
+                  ? 'rounded-[5px] border-2 border-stone2-900 bg-neon-500 shadow-[3px_3px_0_#0A0A0A]'
+                  : 'glass glass-edge glass-hover'
               }`}
             >
               <Zap size={20} className="shrink-0 text-forest-700" strokeWidth={1.8} />
@@ -84,6 +88,9 @@ export default function PickupPage() {
                   Usually 10–15 minutes. We&apos;ll confirm the exact time.
                 </span>
               </span>
+              {modo === 'asap' && (
+                <Check size={20} strokeWidth={3} className="ml-auto shrink-0 text-stone2-900" />
+              )}
             </button>
           )}
 

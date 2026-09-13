@@ -13,6 +13,7 @@ import type { Build } from '@/lib/builder';
 import { useBestSellers } from '@/hooks/use-recipes';
 import { useHabit, useLastOrder, useReorder } from '@/hooks/use-reorder';
 import { productImage } from '@/lib/images';
+import { DrinkThumb } from '@/components/features/builder/drink-thumb';
 import type { FavoriteDrink, Order } from '@/types/api.types';
 import { toast } from 'sonner';
 import { useProducts } from '@/hooks/use-products';
@@ -207,13 +208,22 @@ function ReorderCard({ order }: { order: Order | undefined }) {
         Last time
       </span>
       <span className="mt-2 flex items-center gap-2.5">
-        {foto && (
-          // eslint-disable-next-line @next/next/no-img-element -- del CDN del API
-          <img
-            src={foto}
+        {first?.build ? (
+          <DrinkThumb
+            build={first.build as Build}
+            fallback={foto}
             alt=""
-            className="h-10 w-10 shrink-0 rounded-md border-2 border-stone2-900 object-cover"
+            className="h-10 w-10 shrink-0 rounded-md border-2 border-stone2-900 bg-birch-100"
           />
+        ) : (
+          foto && (
+            // eslint-disable-next-line @next/next/no-img-element -- del CDN del API
+            <img
+              src={foto}
+              alt=""
+              className="h-10 w-10 shrink-0 rounded-md border-2 border-stone2-900 object-cover"
+            />
+          )
         )}
         <span className="min-w-0 flex-1">
           <span className="block truncate text-[14.5px] font-bold leading-tight text-stone2-900">

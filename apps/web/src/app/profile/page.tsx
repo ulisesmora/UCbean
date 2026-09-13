@@ -18,6 +18,7 @@ import { RepeatSheet } from '@/components/features/menu/customise-sheet';
 import type { Build } from '@/lib/builder';
 import type { FavoriteDrink } from '@/types/api.types';
 import { productImage } from '@/lib/images';
+import { DrinkThumb } from '@/components/features/builder/drink-thumb';
 import { shareDrink } from '@/lib/share';
 import { useProducts } from '@/hooks/use-products';
 import { LoyaltySummary } from '@/components/features/account/loyalty-summary';
@@ -62,7 +63,7 @@ export default function ProfilePage() {
 
   function handleLogout() {
     logout.mutate(undefined, {
-      onSuccess: () => {
+      onSettled: () => {
         toast.success('Signed out');
         router.push('/');
       },
@@ -166,6 +167,7 @@ export default function ProfilePage() {
                           },
                         )}
                         alt={i.name ?? i.productName}
+                        build={i.build as Build | null}
                       />
                       <span className="min-w-0 flex-1">
                         <span className="block truncate text-sm text-stone2-900">
@@ -241,10 +243,13 @@ export default function ProfilePage() {
 }
 
 /** La foto de una línea del historial, con hueco reservado cuando no hay. */
-function Thumb({ src, alt }: { src: string | null; alt: string }) {
+function Thumb({ src, alt, build }: { src: string | null; alt: string; build?: Build | null }) {
   return (
     <span className="relative flex h-11 w-11 shrink-0 items-center justify-center overflow-hidden rounded-[9px] border-2 border-stone2-900 bg-birch-100">
-      {src ? (
+      {build ? (
+        // A drink made to a formula turns in 3D: a menu photo says nothing about it.
+        <DrinkThumb build={build} fallback={src} alt={alt} className="h-full w-full" />
+      ) : src ? (
         // eslint-disable-next-line @next/next/no-img-element -- del CDN del API
         <img src={src} alt={alt} loading="lazy" className="h-full w-full object-cover" />
       ) : (

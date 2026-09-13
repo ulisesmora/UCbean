@@ -9,6 +9,7 @@ import { useCartStore, type CartItem } from '@/stores/cart.store';
 import { useAuthStore } from '@/stores/auth.store';
 import { useFavorites, useReorderFavorite, useSaveFavorite } from '@/hooks/use-favorites';
 import { productImage } from '@/lib/images';
+import { DrinkThumb } from '@/components/features/builder/drink-thumb';
 import { toast } from 'sonner';
 
 /**
@@ -81,7 +82,17 @@ function Line({ item }: { item: CartItem }) {
       transition={{ duration: 0.24, ease: [0.22, 0.9, 0.24, 1] }}
       className="glass glass-edge glass-hover flex items-center gap-3 p-3"
     >
-      <LineImage src={productImage(product)} alt={label} />
+      {build ? (
+        // A drink made to a formula turns in 3D: a menu photo says nothing about it.
+        <DrinkThumb
+          build={build}
+          fallback={productImage(product)}
+          alt={label}
+          className="h-14 w-14 shrink-0 rounded-[10px] border-2 border-stone2-900 bg-birch-100"
+        />
+      ) : (
+        <LineImage src={productImage(product)} alt={label} />
+      )}
 
       <div className="min-w-0 flex-1">
         <p className="truncate text-[15px] font-bold leading-tight text-stone2-900">{label}</p>

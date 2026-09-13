@@ -44,8 +44,9 @@ export function useLogout() {
   const qc = useQueryClient();
 
   return useMutation({
-    mutationFn: authApi.logout,
-    onSuccess: () => {
+    mutationFn: () => authApi.logout(useAuthStore.getState().accessToken),
+    // Signing out always works on this device, even if the API call fails.
+    onSettled: () => {
       clearAuth();
       qc.clear();
     },

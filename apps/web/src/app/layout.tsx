@@ -3,6 +3,7 @@ import { Hahmlet, JetBrains_Mono, Playfair_Display, Plus_Jakarta_Sans } from 'ne
 import './globals.css';
 import { Header } from '@/components/layout/header';
 import { MobileNav } from '@/components/layout/mobile-nav';
+import { Footer } from '@/components/layout/footer';
 import { Providers } from '@/providers';
 
 const displayFont = Playfair_Display({
@@ -60,7 +61,10 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       <body className="min-h-screen bg-birch-50 text-stone2-900 font-body antialiased">
         <Providers>
           <Header />
-          <main className="page-bloom relative pb-20 md:pb-0">{children}</main>
+          {/* The footer now clears the fixed tab bar on phones, so the page
+              content no longer needs its own bottom padding. */}
+          <main className="page-bloom relative">{children}</main>
+          <Footer />
           <MobileNav />
         </Providers>
       </body>

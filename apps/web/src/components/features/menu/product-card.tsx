@@ -7,6 +7,7 @@ import type { Product } from '@/types/api.types';
 import { cn } from '@/lib/utils';
 import { fallbackPhoto, imageSrc } from '@/lib/images';
 import { Photo } from '@/components/ui/photo';
+import { DrinkThumb } from '@/components/features/builder/drink-thumb';
 import { CustomiseSheet } from './customise-sheet';
 import { BUILD_OWN } from './build-your-own-card';
 
@@ -34,13 +35,22 @@ export function ProductCard({ product, sizes }: Props) {
   return (
     <>
       <div className="glass glass-edge glass-hover group flex h-full flex-col p-5 transition-transform duration-300 hover:scale-[1.015]">
-        <Photo
-          src={imageSrc(product.imageUrl) ?? fallbackPhoto(product.name, product.category?.name)}
-          label={product.name}
-          alt={`${product.name} at the bar`}
-          className="mb-5 aspect-square w-full"
-          sizes={sizes ?? '(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 30vw'}
-        />
+        {configurable ? (
+          // Build your own has no single photo: prepared drinks turn in 3D instead.
+          <DrinkThumb
+            fallback={`/photos/${fallbackPhoto(product.name, product.category?.name)}`}
+            alt="Drinks you can build, turning one after another"
+            className="glass glass-edge mb-5 aspect-square w-full"
+          />
+        ) : (
+          <Photo
+            src={imageSrc(product.imageUrl) ?? fallbackPhoto(product.name, product.category?.name)}
+            label={product.name}
+            alt={`${product.name} at the bar`}
+            className="mb-5 aspect-square w-full"
+            sizes={sizes ?? '(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 30vw'}
+          />
+        )}
 
         <div className="mb-1.5 flex items-start justify-between gap-3">
           <p className="font-seal text-[17px] leading-snug text-stone2-900">{product.name}</p>
