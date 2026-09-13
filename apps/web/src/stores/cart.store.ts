@@ -3,6 +3,7 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import { describe, priceOf, EXTRAS, type Build } from '@/lib/builder';
+import { recipeAdjustment } from '@/lib/price-book';
 import type { Product } from '@/types/api.types';
 
 /**
@@ -146,7 +147,11 @@ export const useCartStore = create<CartState>()(
                 ].join(', ') || undefined,
             // A built drink is priced by its formula; a bag of beans by the
             // shelf, más lo que se le haya añadido encima.
-            price: build ? priceOf(build) : Math.round((product.price + anadido) * 100) / 100,
+            // A recipe with a fixed menu price is charged that price plus what
+            // was changed on it, which is formula plus the recipe's adjustment.
+            price: build
+              ? Math.round((priceOf(build) + recipeAdjustment(product)) * 100) / 100
+              : Math.round((product.price + anadido) * 100) / 100,
           };
           return { items: [...state.items, line] };
         }),

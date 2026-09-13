@@ -55,6 +55,8 @@ export interface RecipeDraft {
   categoryId?: string | null;
   /** Photo on its menu card. */
   imageUrl?: string | null;
+  /** Fixed menu price. Blank charges the sum of its ingredients. */
+  priceOverride?: number | string | null;
 }
 
 /** La fecha como la quiere un <input type="date">: solo el día. */
@@ -110,6 +112,9 @@ export function RecipeForm({
   const [slug, setSlug] = useState(initial?.slug ?? '');
   const [kind, setKind] = useState<'SIGNATURE' | 'SEASONAL'>(initial?.kind ?? 'SIGNATURE');
   const [imageUrl, setImageUrl] = useState<string | null>(initial?.imageUrl ?? null);
+  const [menuPrice, setMenuPrice] = useState(
+    initial?.priceOverride != null ? Number(initial.priceOverride).toFixed(2) : '',
+  );
 
   const categorias = useQuery({
     queryKey: ['crm', 'categories'],
@@ -168,6 +173,7 @@ export function RecipeForm({
           categoryId: String(f.get('categoryId') ?? '') || null,
           // Null on purpose, so removing a photo reaches the server.
           imageUrl: imageUrl ?? null,
+          priceOverride: menuPrice.trim() === '' ? null : Math.round(Number(menuPrice) * 100) / 100,
         });
       }}
     >
@@ -412,6 +418,31 @@ export function RecipeForm({
             {precio.data.ticket}
           </p>
         )}
+      </div>
+
+      {/* The price the website sells it at. Blank follows the ingredients;
+          a number fixes it, and changes a customer makes are added on top. */}
+      <div className="grid gap-3 sm:grid-cols-[180px_minmax(0,1fr)] sm:items-center">
+        <div className="flex flex-col gap-1.5">
+          <label htmlFor="priceOverride" className="text-[12.5px] font-semibold text-stone2-600">
+            Menu price
+          </label>
+          <input
+            id="priceOverride"
+            type="number"
+            inputMode="decimal"
+            step="0.05"
+            min="0"
+            value={menuPrice}
+            onChange={(e) => setMenuPrice(e.target.value)}
+            placeholder={precio.data ? precio.data.price.toFixed(2) : ''}
+            className="field tap-target tabular"
+          />
+        </div>
+        <p className="text-[12px] leading-snug text-stone2-400">
+          Blank sells it at the sum of its ingredients, shown above. A number sells it at that fixed
+          price; an extra shot or a bigger size is added on top. Ingredient prices are in Prices.
+        </p>
       </div>
 
       <div className="flex gap-2">

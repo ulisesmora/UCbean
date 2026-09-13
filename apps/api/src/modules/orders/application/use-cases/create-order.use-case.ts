@@ -11,6 +11,7 @@ import {
 import { OrderEntity, OrderType } from '../../domain/entities/order.entity';
 import type { DrinkBuild } from '../../domain/value-objects/drink-build';
 import { priceOfBuild, priceOfExtras } from '../../domain/value-objects/drink-price';
+import { priceOfRecipeLine } from '../../domain/value-objects/price-book';
 import { ReservePickupSlotUseCase } from '../../../reservations/application/use-cases/reserve-pickup-slot.use-case';
 import { PickupReservation } from '../../../reservations/domain/entities/pickup-reservation.entity';
 import { EVENTS, type OrderPlacedEvent } from '../../../../common/events/domain-events';
@@ -105,10 +106,27 @@ export class CreateOrderUseCase {
         }
         // Price is ours, never the client's. A built drink is priced by its
         // formula; a catalogue item by the shelf plus whatever was added on top.
+        // A recipe with a fixed menu price charges that price, plus whatever
+        // the customer changed on it.
+        const recipe =
+          item.build && item.recipeId
+            ? await this.prisma.recipe.findUnique({
+                where: { slug: item.recipeId },
+                select: { build: true, priceOverride: true },
+              })
+            : null;
         return {
           ...item,
           unitPrice: item.build
-            ? priceOfBuild(item.build)
+            ? priceOfRecipeLine(
+                item.build,
+                recipe
+                  ? {
+                      build: recipe.build as unknown as DrinkBuild,
+                      priceOverride: recipe.priceOverride?.toNumber() ?? null,
+                    }
+                  : null,
+              )
             : Math.round((product.price + priceOfExtras(item.extras)) * 100) / 100,
           name: item.name ?? product.name,
         };

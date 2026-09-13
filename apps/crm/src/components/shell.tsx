@@ -13,6 +13,7 @@ import {
   UsersRound,
   TrendingUp,
   Wallet,
+  Tags,
 } from 'lucide-react';
 import { useIdentity, useIsOwner, useLogout } from '@/stores/auth';
 import { useSidebar } from '@/stores/ui';
@@ -23,6 +24,7 @@ const NAV = [
   { to: '/pedidos', label: 'Orders', icon: CalendarClock },
   { to: '/clientes', label: 'Customers', icon: Users },
   { to: '/recetas', label: 'Recipes', icon: Coffee },
+  { to: '/precios', label: 'Prices', icon: Tags },
   { to: '/productos', label: 'Products', icon: Package, ownerOnly: true },
   { to: '/mesas', label: 'Tables', icon: CalendarClock },
   { to: '/lealtad', label: 'Loyalty', icon: Stars },

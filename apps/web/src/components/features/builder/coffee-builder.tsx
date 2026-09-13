@@ -1,6 +1,7 @@
 'use client';
 
 import dynamic from 'next/dynamic';
+import { usePriceBook } from '@/lib/price-book';
 import { Component, useEffect, useMemo, useRef, useState } from 'react';
 import type { ReactNode } from 'react';
 import { Heart } from 'lucide-react';
@@ -187,6 +188,8 @@ export function CoffeeBuilder({
 } = {}) {
   const [build, setBuild] = useState<Build>(initialBuild ?? DEFAULT_BUILD);
   const [step, setStep] = useState(0);
+  // Option prices and the total follow the counter app's prices once loaded.
+  usePriceBook((s) => s.version);
   // The stage the 3D is showing. On mobile it trails `step` until the
   // preview has scrolled into view, so the animation is watched, not missed.
   const [shownStep, setShownStep] = useState(0);
@@ -198,7 +201,7 @@ export function CoffeeBuilder({
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
   const save = useSaveFavorite();
 
-  const { data: products } = useQuery({
+  const { data: products, isLoading: loadingMenu } = useQuery({
     queryKey: ['products'],
     queryFn: () => productsApi.list(),
     staleTime: 5 * 60_000,
@@ -207,7 +210,9 @@ export function CoffeeBuilder({
 
   function addToOrder() {
     if (!anchor) {
-      toast.error('Cannot add this right now. Please try again in a moment.');
+      toast.error(
+        'Build your own is not on the menu yet. Ask the café to add it, or try again in a moment.',
+      );
       return;
     }
     addItem(anchor, { build, label: `${baseOf(build).name}, your way` });
@@ -557,7 +562,9 @@ export function CoffeeBuilder({
                   <button
                     type="button"
                     onClick={addToOrder}
-                    disabled={!anchor}
+                    // Only while the menu loads. If the Build your own product is
+                    // missing, the click says so instead of a silently dead button.
+                    disabled={loadingMenu}
                     className="btn btn-acid px-7 py-3 text-[14px] disabled:cursor-not-allowed disabled:opacity-50"
                   >
                     Add to order · ${total.toFixed(2)}

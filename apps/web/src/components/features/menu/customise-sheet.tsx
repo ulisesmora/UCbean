@@ -13,6 +13,7 @@ import { useLiveRecipes } from '@/hooks/use-recipes';
 import { useProducts } from '@/hooks/use-products';
 import { useCartStore } from '@/stores/cart.store';
 import { useDeviceQuality } from '@/lib/device-quality';
+import { recipeAdjustment, usePriceBook } from '@/lib/price-book';
 import { productImage } from '@/lib/images';
 import { ServePoster } from '@/components/features/builder/serve-poster';
 import type { Product } from '@/types/api.types';
@@ -84,6 +85,8 @@ export function CustomiseSheet({
   // On a low-power device the product photo stands in for the 3D, and the
   // dialog still waits for it to be "served" before closing.
   const quality = useDeviceQuality();
+  // Re-render when the server's component prices arrive.
+  usePriceBook((s) => s.version);
 
   const [extras, setExtras] = useState<string[]>([]);
   const [where, setWhere] = useState<Where>('togo');
@@ -154,7 +157,7 @@ export function CustomiseSheet({
   const serving = phase !== 'choosing';
   const chosen = EXTRAS.filter((e) => extras.includes(e.id));
   const unit = custom
-    ? priceOf(build)
+    ? Math.round((priceOf(build) + recipeAdjustment(product)) * 100) / 100
     : Number(product.price) + (drink ? chosen.reduce((s, e) => s + e.price, 0) : 0);
   const cold = build.serve !== 'hot';
   const name = prefill?.label ?? product.name;

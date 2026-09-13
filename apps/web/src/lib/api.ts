@@ -241,6 +241,11 @@ export const recipesApi = {
     api.get<(ApiRecipe & { sold: number })[]>(`/recipes/best-sellers?limit=${limit}&days=${days}`),
 };
 
+/** The drink builder's parts, with the prices the counter app set. */
+export const drinksApi = {
+  options: () => api.get<Record<string, { id: string; price: number }[]>>('/drinks/options'),
+};
+
 export const authApi = {
   register: (body: { name: string; email: string; password: string; phone?: string }) =>
     api.post<AuthResponse>('/auth/register', body),

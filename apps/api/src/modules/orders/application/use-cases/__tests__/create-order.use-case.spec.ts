@@ -72,6 +72,8 @@ describe('CreateOrderUseCase', () => {
     // prueba aquí son las reglas del pedido, no Postgres.
     const prisma = {
       $transaction: jest.fn((fn: (tx: unknown) => unknown) => fn({})),
+      // No recipe by default: a built drink is priced by its formula.
+      recipe: { findUnique: jest.fn().mockResolvedValue(null) },
       order: { findUnique: jest.fn().mockResolvedValue(null) },
     } as any;
     useCase = new CreateOrderUseCase(
@@ -204,6 +206,53 @@ describe('CreateOrderUseCase', () => {
       expect.objectContaining({
         items: [
           expect.objectContaining({ build, recipeId: 'latte', unitPrice: 6.2, name: 'P p-1' }),
+        ],
+      }),
+      expect.anything(),
+    );
+  });
+
+  it('charges a recipe its fixed menu price, plus what the customer changed', async () => {
+    productRepo.findById.mockResolvedValue(makeProduct('p-1'));
+    orderRepo.create.mockResolvedValue(makeOrder());
+
+    const recipeBuild = {
+      beans: 'colombia',
+      size: 'medium' as const,
+      base: 'latte',
+      serve: 'hot' as const,
+      milk: 'oat',
+      foam: 'micro' as const,
+      art: 'heart' as const,
+      extras: [] as string[],
+      vessel: 'togo' as const,
+      sleeve: 'kraft',
+    };
+    const prisma = (useCase as any).prisma;
+    prisma.recipe.findUnique.mockResolvedValue({
+      build: recipeBuild,
+      priceOverride: { toNumber: () => 6 },
+    });
+
+    await useCase.execute({
+      userId: 'user-1',
+      type: 'TABLE',
+      items: [
+        { productId: 'p-1', qty: 1, build: recipeBuild, recipeId: 'oat-latte' },
+        {
+          productId: 'p-1',
+          qty: 1,
+          build: { ...recipeBuild, extras: ['extrashot'] },
+          recipeId: 'oat-latte',
+        },
+      ],
+    });
+
+    expect(orderRepo.create).toHaveBeenCalledWith(
+      expect.objectContaining({
+        items: [
+          expect.objectContaining({ recipeId: 'oat-latte', unitPrice: 6 }),
+          expect.objectContaining({ recipeId: 'oat-latte', unitPrice: 7 }),
         ],
       }),
       expect.anything(),

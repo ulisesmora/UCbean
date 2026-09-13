@@ -3,6 +3,8 @@ import {
   IsDateString,
   IsIn,
   IsInt,
+  IsNumber,
+  Min,
   IsOptional,
   IsString,
   IsUUID,
@@ -10,7 +12,7 @@ import {
   MaxLength,
   ValidateNested,
 } from 'class-validator';
-import { Type } from 'class-transformer';
+import { Transform, Type } from 'class-transformer';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { DrinkBuildDto } from '../../../orders/presentation/dtos/create-order.dto';
 
@@ -81,6 +83,19 @@ export class CreateRecipeDto {
   @IsOptional()
   @IsUUID()
   categoryId?: string | null;
+
+  @ApiPropertyOptional({
+    nullable: true,
+    description: 'Fixed menu price. null charges the sum of its ingredients.',
+  })
+  @IsOptional()
+  // A save from the counter app may send back the figure as text ("6.00").
+  @Transform(({ value }) =>
+    value === null || value === undefined || value === '' ? null : Number(value),
+  )
+  @IsNumber({ maxDecimalPlaces: 2 })
+  @Min(0)
+  priceOverride?: number | null;
 
   @ApiPropertyOptional({ description: 'Photo for its menu card. null removes it.' })
   @IsOptional()

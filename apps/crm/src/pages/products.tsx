@@ -2,7 +2,8 @@ import { useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { FolderPlus, Plus, Trash2 } from 'lucide-react';
 import { ImageUpload } from '@/components/image-upload';
-import { api, imageSrc } from '@/lib/api';
+import { ProductPhoto } from '@/components/product-photo';
+import { api } from '@/lib/api';
 import { money } from '@/lib/format';
 import { Card, Chip, Empty, ErrorBox, Eyebrow, Field, PageHead, Spinner } from '@/components/ui';
 
@@ -190,14 +191,8 @@ export function ProductsPage() {
                   className={`flex flex-col gap-2 ${p.isAvailable ? '' : 'opacity-55'}`}
                 >
                   {p.imageUrl && (
-                    <img
-                      src={imageSrc(p.imageUrl) ?? undefined}
-                      alt=""
-                      loading="lazy"
-                      // La proporcion se reserva antes de cargar, para que
-                      // la rejilla no salte cuando entran las fotos.
-                      className="mb-1 aspect-[16/10] w-full rounded-lg object-cover"
-                    />
+                    // The proportion is reserved before loading, so the grid does not jump.
+                    <ProductPhoto url={p.imageUrl} className="mb-1 aspect-[16/10] w-full" />
                   )}
 
                   <div className="flex items-start justify-between gap-3">

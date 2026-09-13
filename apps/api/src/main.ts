@@ -41,11 +41,26 @@ async function bootstrap() {
    * inmutable un año: el navegador no vuelve a pedirla nunca, y si la
    * foto cambia, cambia la URL. Es lo que hace un CDN, sin contratar uno.
    */
-  const uploads = process.env.UPLOADS_DIR ?? join(process.cwd(), 'uploads');
-  mkdirSync(uploads, { recursive: true });
+  // Photos are served from every folder they may have been written to: the
+  // configured one (a Railway volume) and the app's own uploads folder, where
+  // anything saved before UPLOADS_DIR existed still lives. The same image URL
+  // then works wherever the file ended up.
+  const roots = [
+    ...new Set([process.env.UPLOADS_DIR, join(process.cwd(), 'uploads')].filter(Boolean)),
+  ] as string[];
+  for (const dir of roots) mkdirSync(dir, { recursive: true });
+  console.log(`Serving uploads from: ${roots.join(', ')}`);
   await app.register(fastifyStatic as any, {
-    root: uploads,
+    root: roots,
     prefix: '/uploads/',
+    // The counter app and the website live on other domains. An <img> does
+    // not need CORS, but these headers let a photo be used from any page,
+    // including by canvas or fetch, and under stricter isolation policies.
+    // @fastify/static hands over the Fastify reply here, not a raw response.
+    setHeaders: (reply: { header: (name: string, value: string) => unknown }) => {
+      reply.header('Access-Control-Allow-Origin', '*');
+      reply.header('Cross-Origin-Resource-Policy', 'cross-origin');
+    },
     decorateReply: false,
     cacheControl: true,
     maxAge: '365d',

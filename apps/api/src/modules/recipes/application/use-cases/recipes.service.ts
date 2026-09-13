@@ -1,4 +1,4 @@
-import { Injectable, Logger, NotFoundException, OnModuleInit } from '@nestjs/common';
+import { Injectable, Logger, NotFoundException, OnApplicationBootstrap } from '@nestjs/common';
 import { PrismaService } from '../../../../prisma/prisma.service';
 import type { DrinkBuild } from '../../../orders/domain/value-objects/drink-build';
 import { describeBuild, priceOfBuild } from '../../../orders/domain/value-objects/drink-price';
@@ -18,7 +18,7 @@ const PRODUCT = { select: { id: true, imageUrl: true, categoryId: true } } as co
 type ProductFields = { categoryId?: string | null; imageUrl?: string | null };
 
 @Injectable()
-export class RecipesService implements OnModuleInit {
+export class RecipesService implements OnApplicationBootstrap {
   private readonly logger = new Logger(RecipesService.name);
 
   constructor(private readonly prisma: PrismaService) {}
@@ -32,13 +32,67 @@ export class RecipesService implements OnModuleInit {
    * the menu without anyone re-saving each recipe. A database that is not
    * reachable yet only logs: the API still starts.
    */
-  async onModuleInit() {
+  // After every module's init, so component prices set from the counter app
+  // are already applied when product prices are computed.
+  async onApplicationBootstrap() {
     try {
-      const rows = await this.prisma.recipe.findMany();
-      for (const row of rows) await this.syncProduct(row, {});
+      await this.ensureBuilderProduct();
+      await this.syncAllProducts();
     } catch (e) {
       this.logger.warn(`Recipe products not synced: ${(e as Error).message}`);
     }
+  }
+
+  /** Brings every recipe's product in line: after boot, and after a price change. */
+  async syncAllProducts() {
+    const rows = await this.prisma.recipe.findMany();
+    for (const row of rows) await this.syncProduct(row, {});
+  }
+
+  /**
+   * The menu row the drink builder orders against.
+   *
+   * A drink built on the website is recorded as a line of "Build your own",
+   * priced by its formula. Without that product the builder could never add a
+   * drink to the bag, which is exactly what happened on a fresh database. So
+   * it is created on boot when missing, under "Made to order". An existing one
+   * is left alone, including if the counter marked it sold out.
+   */
+  private async ensureBuilderProduct() {
+    const existing = await this.prisma.product.findFirst({
+      where: { name: { equals: 'Build your own', mode: 'insensitive' } },
+      select: { id: true },
+    });
+    if (existing) return;
+
+    const category = await this.prisma.category.upsert({
+      where: { name: 'Made to order' },
+      update: {},
+      create: { name: 'Made to order' },
+      select: { id: true },
+    });
+    const starter: DrinkBuild = {
+      beans: 'house',
+      size: 'small',
+      base: 'latte',
+      serve: 'hot',
+      milk: 'whole',
+      foam: 'micro',
+      art: 'none',
+      extras: [],
+      vessel: 'togo',
+      sleeve: 'kraft',
+    };
+    await this.prisma.product.create({
+      data: {
+        name: 'Build your own',
+        description: 'Your drink, your way. Priced by what you choose.',
+        // The starting price shown on the menu; each order is charged its formula.
+        price: priceOfBuild(starter),
+        categoryId: category.id,
+      },
+    });
+    this.logger.log('Created the Build your own product the drink builder orders against');
   }
 
   /**
@@ -166,13 +220,18 @@ export class RecipesService implements OnModuleInit {
       kind: string;
       build: unknown;
       productId: string | null;
+      priceOverride?: { toString(): string } | number | null;
     },
     extra: ProductFields,
   ): Promise<string> {
     const data = {
       name: recipe.name,
       description: recipe.note,
-      price: priceOfBuild(recipe.build as DrinkBuild),
+      // The fixed menu price when the owner set one, the formula otherwise.
+      price:
+        recipe.priceOverride != null
+          ? Number(recipe.priceOverride)
+          : priceOfBuild(recipe.build as DrinkBuild),
       ...(extra.categoryId ? { categoryId: extra.categoryId } : {}),
       // undefined leaves the photo as it is; null removes it.
       ...(extra.imageUrl !== undefined ? { imageUrl: extra.imageUrl } : {}),
@@ -230,13 +289,17 @@ export class RecipesService implements OnModuleInit {
   private decorate<
     T extends {
       build: unknown;
+      priceOverride?: { toString(): string } | number | null;
       product?: { id: string; imageUrl: string | null; categoryId: string } | null;
     },
   >(row: T) {
     const build = row.build as DrinkBuild;
     return {
       ...row,
-      price: priceOfBuild(build),
+      // What the menu charges: the fixed price, or the sum of ingredients.
+      price: row.priceOverride != null ? Number(row.priceOverride) : priceOfBuild(build),
+      formulaPrice: priceOfBuild(build),
+      priceOverride: row.priceOverride != null ? Number(row.priceOverride) : null,
       ticket: describeBuild(build),
       // The product it is sold as: what the web adds to the bag and shows.
       productId: row.product?.id ?? null,

@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { ArrowRight, Sparkles } from 'lucide-react';
 import { Photo } from '@/components/ui/photo';
 import { DEFAULT_BUILD, priceOf } from '@/lib/builder';
+import { usePriceBook } from '@/lib/price-book';
 
 /** The catalogue row the configurator orders against. It is not picked off a shelf. */
 export const BUILD_OWN = /build your own/i;
@@ -17,6 +18,7 @@ export const BUILD_OWN = /build your own/i;
  * recommendation and not as one more item in the grid.
  */
 export function BuildYourOwnCard() {
+  usePriceBook((s) => s.version);
   const from = priceOf({ ...DEFAULT_BUILD, size: 'small', milk: 'whole', art: 'none', extras: [] });
 
   return (

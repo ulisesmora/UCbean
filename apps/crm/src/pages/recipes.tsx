@@ -1,11 +1,12 @@
 import { useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Pencil, Plus, Power } from 'lucide-react';
-import { api, imageSrc } from '@/lib/api';
+import { api } from '@/lib/api';
 import { money } from '@/lib/format';
 import { Card, Chip, Empty, ErrorBox, Eyebrow, PageHead, Spinner } from '@/components/ui';
 import { useIsOwner } from '@/stores/auth';
 import { RecipeForm, type RecipeDraft } from '@/components/recipe-form';
+import { ProductPhoto } from '@/components/product-photo';
 
 interface Recipe {
   id: string;
@@ -23,6 +24,10 @@ interface Recipe {
   build: Record<string, unknown>;
   /** The product it is sold as on the website. */
   productId: string | null;
+  /** Fixed menu price, or null when it follows its ingredients. */
+  priceOverride: number | null;
+  /** The sum of its ingredients, whatever the menu price is. */
+  formulaPrice: number;
   imageUrl: string | null;
   categoryId: string | null;
 }
@@ -206,14 +211,7 @@ function Section({
       <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
         {recipes.map((r) => (
           <Card key={r.id} className={`flex flex-col gap-2 ${r.isActive ? '' : 'opacity-55'}`}>
-            {r.imageUrl && (
-              <img
-                src={imageSrc(r.imageUrl) ?? undefined}
-                alt=""
-                loading="lazy"
-                className="mb-1 aspect-[16/10] w-full rounded-lg object-cover"
-              />
-            )}
+            {r.imageUrl && <ProductPhoto url={r.imageUrl} className="mb-1 aspect-[16/10] w-full" />}
             <div className="flex items-start justify-between gap-2">
               <div className="min-w-0">
                 <h3 className="truncate text-[17px] font-extrabold text-stone2-900">{r.name}</h3>
@@ -231,6 +229,7 @@ function Section({
             <div className="mt-auto flex flex-wrap items-center gap-1.5 pt-2">
               {r.season && <Chip>{r.season}</Chip>}
               {r.productId && <Chip tone="neutral">On the website</Chip>}
+              {r.priceOverride != null && <Chip>Fixed price</Chip>}
               {/* Encendida pero fuera de su ventana es el estado que engaña:
                   aquí pone «En carta» y en la web no sale. Se dice. */}
               {ventana(r) && <Chip tone="neutral">{ventana(r)}</Chip>}

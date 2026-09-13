@@ -4,6 +4,8 @@ import { ProductsModule } from '../products/products.module';
 import { ReservationsModule } from '../reservations/reservations.module';
 import { AddressesModule } from '../addresses/addresses.module';
 import { DiscountsModule } from '../discounts/discounts.module';
+import { RecipesModule } from '../recipes/recipes.module';
+import { DrinkPricesService } from './application/use-cases/drink-prices.service';
 import { ORDER_REPOSITORY } from './domain/repositories/order.repository.interface';
 import { PrismaOrderRepository } from './infrastructure/repositories/prisma-order.repository';
 import { CreateOrderUseCase } from './application/use-cases/create-order.use-case';
@@ -13,13 +15,21 @@ import { OrdersController } from './presentation/controllers/orders.controller';
 import { DrinksController } from './presentation/controllers/drinks.controller';
 
 @Module({
-  imports: [PrismaModule, ProductsModule, ReservationsModule, AddressesModule, DiscountsModule],
+  imports: [
+    PrismaModule,
+    ProductsModule,
+    ReservationsModule,
+    AddressesModule,
+    DiscountsModule,
+    RecipesModule,
+  ],
   controllers: [OrdersController, DrinksController],
   providers: [
     { provide: ORDER_REPOSITORY, useClass: PrismaOrderRepository },
     CreateOrderUseCase,
     GetMyOrdersUseCase,
     UpdateOrderStatusUseCase,
+    DrinkPricesService,
   ],
 })
 export class OrdersModule {}

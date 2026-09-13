@@ -336,6 +336,10 @@ model Recipe {
 
   /// The product this recipe is sold as: what goes on the menu, in the bag
   /// and on the ticket. Created and kept in sync by the recipes service.
+  /// A fixed menu price. Null charges the sum of its ingredients. Changes a
+  /// customer makes to the recipe are added on top of either.
+  priceOverride Decimal? @db.Decimal(10, 2)
+
   productId String?  @unique
   product   Product? @relation(fields: [productId], references: [id], onDelete: SetNull)
 
@@ -638,4 +642,17 @@ model FavoriteDrink {
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId, timesOrdered])
+}
+
+/// What one part of a drink costs, set from the counter app. An option with no
+/// row costs its default from drink-catalogue.ts, so deleting a row resets it.
+model DrinkOptionPrice {
+  /// beans, sizes, bases, serves, milks, foams, arts, extras, vessels or sleeves.
+  group     String
+  /// The option's permanent id, the same one stored inside order lines.
+  optionId  String
+  price     Decimal  @db.Decimal(10, 2)
+  updatedAt DateTime @updatedAt
+
+  @@id([group, optionId])
 }

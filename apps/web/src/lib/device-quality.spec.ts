@@ -27,12 +27,19 @@ describe('qualityFrom', () => {
   });
 
   it('drops weak devices to a still photo', () => {
-    expect(qualityFrom({ ...desktop, coarsePointer: true, deviceMemory: 2 })).toBe('low');
+    expect(qualityFrom({ ...desktop, coarsePointer: true, deviceMemory: 1 })).toBe('low');
     expect(qualityFrom({ ...desktop, cores: 2 })).toBe('low');
   });
 
-  it('respects reduced motion, data saving and a slow network', () => {
-    expect(qualityFrom({ ...desktop, reducedMotion: true })).toBe('low');
+  it('keeps the 3D on an ordinary 2 GB phone', () => {
+    expect(qualityFrom({ ...desktop, coarsePointer: true, deviceMemory: 2 })).toBe('mid');
+  });
+
+  it('lightens the scene for reduced motion instead of hiding it', () => {
+    expect(qualityFrom({ ...desktop, reducedMotion: true })).toBe('mid');
+  });
+
+  it('respects data saving and a slow network', () => {
     expect(qualityFrom({ ...desktop, saveData: true })).toBe('low');
     expect(qualityFrom({ ...desktop, slowNetwork: true })).toBe('low');
   });

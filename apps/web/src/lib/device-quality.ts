@@ -8,9 +8,14 @@ import { useState } from 'react';
  * - mid: an ordinary phone. The same scene with see-through glass instead of
  *   refraction, a plain backdrop and fewer particles. Same look at a glance,
  *   a fraction of the GPU work.
- * - low: a weak or data-saving device, or someone who asked for less motion.
- *   A real photo where decorative 3D would be. The drink builder keeps its 3D,
- *   rendered as mid, because there the 3D is the product.
+ * - low: no WebGL, data saving or a 2G connection, or a truly weak device
+ *   (1 GB of memory or 2 cores). A real photo where the 3D would be. The
+ *   drink builder keeps its 3D, rendered as mid, because there it is the product.
+ *
+ * Reduced motion is not a reason to drop to a photo: the lighter scene still
+ * shows the drink and its extras, and anything that loops honours the setting
+ * on its own. Treating it, and ordinary 2-3 GB Android phones, as "low" hid
+ * the 3D and the extras animation from too many real customers.
  *
  * Add `?quality=low`, `mid` or `high` to any URL to force a tier on a real
  * phone. It is kept for that browser tab.
@@ -30,12 +35,13 @@ export interface QualitySignals {
 
 /** The tier for a set of signals. Pure, so it can be tested without a browser. */
 export function qualityFrom(s: QualitySignals): Quality {
-  if (!s.webgl || s.reducedMotion || s.saveData || s.slowNetwork) return 'low';
+  if (!s.webgl || s.saveData || s.slowNetwork) return 'low';
   const weak =
-    (s.deviceMemory !== undefined && s.deviceMemory <= 2) ||
+    (s.deviceMemory !== undefined && s.deviceMemory <= 1) ||
     (s.cores !== undefined && s.cores <= 2);
   if (weak) return 'low';
   const modest =
+    s.reducedMotion ||
     s.coarsePointer ||
     (s.deviceMemory !== undefined && s.deviceMemory <= 4) ||
     (s.cores !== undefined && s.cores <= 4);

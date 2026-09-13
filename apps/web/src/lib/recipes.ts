@@ -38,6 +38,8 @@ export type Recipe = {
   note: string;
   /** The formula. Everything else is derived from it. */
   build: Build;
+  /** The menu price from the server: a fixed price when the owner set one. */
+  price?: number;
 };
 
 /** Shorthand so each recipe reads as the handful of choices that define it. */
@@ -217,7 +219,7 @@ export const RECIPES: Recipe[] = [...SIGNATURES, ...SEASONALS];
 export const recipeById = (id: string) => RECIPES.find((r) => r.id === id);
 
 /** Price, derived from the formula rather than typed in beside it. */
-export const recipePrice = (r: Recipe) => priceOf(r.build);
+export const recipePrice = (r: Recipe) => r.price ?? priceOf(r.build);
 
 /** The ticket line, in the same words the configurator would use. */
 export const recipeTicket = (r: Recipe) => describe(r.build);

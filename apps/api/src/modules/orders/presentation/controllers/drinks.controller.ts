@@ -1,5 +1,10 @@
-import { Body, Controller, Get, Post } from '@nestjs/common';
-import { ApiOperation, ApiTags } from '@nestjs/swagger';
+import { Body, Controller, Get, Param, Patch, Post, UseGuards } from '@nestjs/common';
+import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
+import { JwtAuthGuard } from '../../../../common/guards/jwt-auth.guard';
+import { RolesGuard } from '../../../../common/guards/roles.guard';
+import { Roles } from '../../../../common/decorators/roles.decorator';
+import { DrinkPricesService } from '../../application/use-cases/drink-prices.service';
+import { SetPriceDto } from '../dtos/set-price.dto';
 import { DRINK_CATALOGUE } from '../../domain/value-objects/drink-catalogue';
 import {
   canPourArt,
@@ -18,6 +23,8 @@ import { DrinkBuildDto } from '../dtos/create-order.dto';
 @ApiTags('Drinks')
 @Controller('drinks')
 export class DrinksController {
+  constructor(private readonly priceBook: DrinkPricesService) {}
+
   @Get('options')
   @ApiOperation({
     summary: 'Every choice that can go into a drink, with its price',
@@ -46,5 +53,35 @@ export class DrinksController {
       takesFoam: hasFoam(build),
       takesArt: canPourArt(build),
     };
+  }
+
+  @Get('prices')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('OWNER', 'STAFF')
+  @ApiBearerAuth()
+  @ApiOperation({
+    summary: 'What each part of a drink costs, with its default',
+    description: 'For the prices screen in the counter app.',
+  })
+  prices() {
+    return this.priceBook.list();
+  }
+
+  @Patch('prices/:group/:optionId')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('OWNER')
+  @ApiBearerAuth()
+  @ApiOperation({
+    summary: 'Set or reset the price of one part (OWNER only)',
+    description:
+      'Takes effect at once for the builder, orders and every recipe without a fixed price. ' +
+      'Send price: null to go back to the default.',
+  })
+  setPrice(
+    @Param('group') group: string,
+    @Param('optionId') optionId: string,
+    @Body() body: SetPriceDto,
+  ) {
+    return this.priceBook.update(group, optionId, body.price ?? null);
   }
 }

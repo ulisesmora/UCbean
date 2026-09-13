@@ -18,6 +18,7 @@ function toRecipe(r: ApiRecipe & { sold?: number }): Recipe & { sold?: number } 
     season: r.season ?? undefined,
     note: r.note,
     build: r.build,
+    price: r.price,
     sold: r.sold,
   };
 }

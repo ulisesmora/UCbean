@@ -7,6 +7,7 @@ import { LoginPage } from '@/pages/login';
 import { DashboardPage } from '@/pages/dashboard';
 import { QueuePage } from '@/pages/queue';
 import { RecipesPage } from '@/pages/recipes';
+import { PricesPage } from '@/pages/prices';
 import { TablesPage } from '@/pages/tables';
 import { LoyaltyPage } from '@/pages/loyalty';
 import { CampaignsPage } from '@/pages/campaigns';
@@ -70,6 +71,7 @@ createRoot(document.getElementById('root')!).render(
             <Route path="ventas" element={<SalesPage />} />
             <Route path="equipo" element={<TeamPage />} />
             <Route path="recetas" element={<RecipesPage />} />
+            <Route path="precios" element={<PricesPage />} />
             <Route path="mesas" element={<TablesPage />} />
             <Route path="lealtad" element={<LoyaltyPage />} />
             <Route path="campanas" element={<CampaignsPage />} />

@@ -5,6 +5,7 @@ import { recipePrice, recipeScene, type Recipe } from '@/lib/recipes';
 import { useWebglStage } from '@/hooks/use-webgl-stage';
 import { useBestSellers, useLiveRecipes } from '@/hooks/use-recipes';
 import { productImage } from '@/lib/images';
+import { usePriceBook } from '@/lib/price-book';
 // The 3D here is decoration: a photo on low-power devices.
 import { AdaptiveCup } from '@/components/features/builder/serve-poster';
 
@@ -23,6 +24,7 @@ export function SeasonalShowcase() {
   // aquí sola. La lista local solo entra si el API no tiene nada.
   const { signatures, seasonals } = useLiveRecipes();
   const { bestSellers } = useBestSellers(6);
+  usePriceBook((s) => s.version);
 
   // La pestaña solo existe cuando hay ventas que la respalden. Un «lo más
   // pedido» de una cafetería que abrió ayer no significa nada.
