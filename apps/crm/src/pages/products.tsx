@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { FolderPlus, Plus, Trash2 } from 'lucide-react';
 import { ImageUpload } from '@/components/image-upload';
-import { api } from '@/lib/api';
+import { api, imageSrc } from '@/lib/api';
 import { money } from '@/lib/format';
 import { Card, Chip, Empty, ErrorBox, Eyebrow, Field, PageHead, Spinner } from '@/components/ui';
 
@@ -14,6 +14,8 @@ interface Product {
   isAvailable: boolean;
   categoryId: string;
   imageUrl: string | null;
+  /** Set when the product is a recipe: name and price then come from Recipes. */
+  recipe?: { slug: string } | null;
 }
 
 interface Category {
@@ -189,7 +191,7 @@ export function ProductsPage() {
                 >
                   {p.imageUrl && (
                     <img
-                      src={p.imageUrl}
+                      src={imageSrc(p.imageUrl) ?? undefined}
                       alt=""
                       loading="lazy"
                       // La proporcion se reserva antes de cargar, para que
@@ -215,6 +217,7 @@ export function ProductsPage() {
                     <Chip tone={p.isAvailable ? 'olive' : 'neutral'}>
                       {p.isAvailable ? 'On sale' : 'Sold out'}
                     </Chip>
+                    {p.recipe && <Chip tone="neutral">Recipe</Chip>}
                     <button
                       type="button"
                       onClick={() => editar.mutate({ id: p.id, isAvailable: !p.isAvailable })}
@@ -284,8 +287,20 @@ function ProductForm({
       }}
     >
       <ImageUpload value={imageUrl} onChange={setImageUrl} />
+      {initial?.recipe && (
+        <p className="text-[12.5px] text-stone2-600">
+          This product is a recipe. Its name, description and price come from its formula: edit them
+          in Recipes. Photo, section and sold out are set here.
+        </p>
+      )}
       <div className="grid gap-3 sm:grid-cols-[1fr_130px]">
-        <Field name="name" label="Name" required defaultValue={initial?.name} />
+        <Field
+          name="name"
+          label="Name"
+          required
+          defaultValue={initial?.name}
+          readOnly={Boolean(initial?.recipe)}
+        />
         <Field
           name="price"
           label="Price"
@@ -294,6 +309,7 @@ function ProductForm({
           min="0"
           required
           defaultValue={initial?.price}
+          readOnly={Boolean(initial?.recipe)}
         />
       </div>
 

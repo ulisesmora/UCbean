@@ -2,6 +2,12 @@ import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../../../../prisma/prisma.service';
 import { IProductRepository } from '../../domain/repositories/product.repository.interface';
 import { Product } from '../../domain/entities/product.entity';
+import { isRecipeLive } from '../../../recipes/domain/recipe-window';
+
+/** What a product needs to know about the recipe it is, when it is one. */
+const RECIPE = {
+  select: { slug: true, build: true, isActive: true, activeFrom: true, activeTo: true },
+} as const;
 
 @Injectable()
 export class PrismaProductRepository implements IProductRepository {
@@ -18,18 +24,29 @@ export class PrismaProductRepository implements IProductRepository {
     createdAt: Date;
     updatedAt: Date;
     category?: { id: string; name: string } | null;
+    recipe?: {
+      slug: string;
+      build: unknown;
+      isActive: boolean;
+      activeFrom: Date | null;
+      activeTo: Date | null;
+    } | null;
   }): Product {
     return new Product(
       r.id,
       r.categoryId,
       r.name,
       r.price.toNumber(),
-      r.isAvailable,
+      // A recipe product is on sale only while its recipe is switched on and in
+      // season, on top of the counter's own sold-out flag. Checked here, so the
+      // menu and the order both see the same answer.
+      r.isAvailable && (r.recipe ? isRecipeLive(r.recipe) : true),
       r.description,
       r.imageUrl,
       r.createdAt,
       r.updatedAt,
       r.category ? { id: r.category.id, name: r.category.name } : null,
+      r.recipe ? { slug: r.recipe.slug, build: r.recipe.build } : null,
     );
   }
 
@@ -37,7 +54,7 @@ export class PrismaProductRepository implements IProductRepository {
     const rows = await this.prisma.product.findMany({
       where: categoryId ? { categoryId } : undefined,
       orderBy: { name: 'asc' },
-      include: { category: { select: { id: true, name: true } } },
+      include: { category: { select: { id: true, name: true } }, recipe: RECIPE },
     });
     return rows.map((r) => this.toEntity(r));
   }
@@ -45,7 +62,7 @@ export class PrismaProductRepository implements IProductRepository {
   async findById(id: string): Promise<Product | null> {
     const r = await this.prisma.product.findUnique({
       where: { id },
-      include: { category: { select: { id: true, name: true } } },
+      include: { category: { select: { id: true, name: true } }, recipe: RECIPE },
     });
     return r ? this.toEntity(r) : null;
   }

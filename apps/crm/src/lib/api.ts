@@ -14,6 +14,23 @@ const BASE =
   import.meta.env.VITE_API_URL ||
   (import.meta.env.PROD ? 'https://ucbean-production.up.railway.app/api/v1' : '/api/v1');
 
+/** The API's origin, without /api/v1. Uploaded photos hang off it. */
+const ORIGIN = BASE.replace(/\/api\/v\d+\/?$/, '');
+
+/**
+ * A stored photo URL, ready for an <img>.
+ *
+ * Uploads are saved as `/uploads/...`, a path on the API server. Used as is,
+ * the browser looked for them on the CRM's own domain, where they do not
+ * exist: the photos showed on the website, which already did this, and not
+ * here. In development ORIGIN is empty and Vite's proxy serves them.
+ */
+export function imageSrc(url: string | null | undefined): string | null {
+  if (!url) return null;
+  if (/^(https?:|blob:|data:)/.test(url)) return url;
+  return `${ORIGIN}${url.startsWith('/') ? '' : '/'}${url}`;
+}
+
 export class ApiError extends Error {
   constructor(
     message: string,

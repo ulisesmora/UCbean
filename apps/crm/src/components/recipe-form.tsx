@@ -3,6 +3,7 @@ import { useQuery } from '@tanstack/react-query';
 import { api } from '@/lib/api';
 import { money } from '@/lib/format';
 import { Eyebrow, Field, Spinner } from '@/components/ui';
+import { ImageUpload } from '@/components/image-upload';
 
 export interface DrinkBuild {
   beans: string;
@@ -50,6 +51,10 @@ export interface RecipeDraft {
   activeTo?: string | null;
   isActive?: boolean;
   build: DrinkBuild;
+  /** The menu section it is sold under. Blank uses Signature or Seasonal Drinks. */
+  categoryId?: string | null;
+  /** Photo on its menu card. */
+  imageUrl?: string | null;
 }
 
 /** La fecha como la quiere un <input type="date">: solo el día. */
@@ -104,6 +109,12 @@ export function RecipeForm({
   const [name, setName] = useState(initial?.name ?? '');
   const [slug, setSlug] = useState(initial?.slug ?? '');
   const [kind, setKind] = useState<'SIGNATURE' | 'SEASONAL'>(initial?.kind ?? 'SIGNATURE');
+  const [imageUrl, setImageUrl] = useState<string | null>(initial?.imageUrl ?? null);
+
+  const categorias = useQuery({
+    queryKey: ['crm', 'categories'],
+    queryFn: () => api.get<{ id: string; name: string }[]>('/products/categories'),
+  });
 
   const opciones = useQuery({
     queryKey: ['drinks', 'options'],
@@ -154,6 +165,9 @@ export function RecipeForm({
           activeFrom: kind === 'SEASONAL' ? String(f.get('activeFrom')) || null : null,
           activeTo: kind === 'SEASONAL' ? String(f.get('activeTo')) || null : null,
           build,
+          categoryId: String(f.get('categoryId') ?? '') || null,
+          // Null on purpose, so removing a photo reaches the server.
+          imageUrl: imageUrl ?? null,
         });
       }}
     >
@@ -203,6 +217,39 @@ export function RecipeForm({
         defaultValue={initial?.note}
         placeholder="Roasted green tea and steamed oat milk"
       />
+
+      {/* Every recipe is also sold as a product: this is its photo and the
+          section of the menu it appears in. Its price is the formula's. */}
+      <div className="grid gap-3 sm:grid-cols-2">
+        <div className="flex flex-col gap-1.5">
+          <span className="text-[12.5px] font-semibold text-stone2-600">Photo on the menu</span>
+          <ImageUpload value={imageUrl} onChange={setImageUrl} />
+        </div>
+        <div className="flex flex-col gap-1.5">
+          <label htmlFor="categoryId" className="text-[12.5px] font-semibold text-stone2-600">
+            Menu section
+          </label>
+          <select
+            id="categoryId"
+            name="categoryId"
+            defaultValue={initial?.categoryId ?? ''}
+            className="field tap-target"
+          >
+            <option value="">
+              {kind === 'SEASONAL' ? 'Seasonal Drinks' : 'Signature Drinks'} (default)
+            </option>
+            {(categorias.data ?? []).map((c) => (
+              <option key={c.id} value={c.id}>
+                {c.name}
+              </option>
+            ))}
+          </select>
+          <span className="text-[11.5px] text-stone2-400">
+            Sold on the website in this section, at the price below. Customers can add it to their
+            bag and order it again as a usual.
+          </span>
+        </div>
+      </div>
 
       <div className="grid gap-3 sm:grid-cols-3">
         <div className="flex flex-col gap-1.5">

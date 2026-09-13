@@ -15,4 +15,6 @@ export class ProductResponseDto {
   @Expose() categoryId: string;
   /** Nombre de la sección de la carta. La web lo usa para saber si es una bebida. */
   @Expose() category: { id: string; name: string } | null;
+  /** Set when this product is a recipe: its slug and formula. */
+  @Expose() recipe: { slug: string; build: unknown } | null;
 }

@@ -17,6 +17,8 @@ export interface Product {
   isAvailable: boolean;
   categoryId: string;
   category?: Category;
+  /** Set when this product is a CRM recipe: its slug and formula. */
+  recipe?: { slug: string; build: DrinkBuild } | null;
 }
 
 export interface OrderItem {

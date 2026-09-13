@@ -1,4 +1,5 @@
 import { useRef, useState } from 'react';
+import { imageSrc } from '@/lib/api';
 import { ImagePlus, Loader2, X } from 'lucide-react';
 import { useAuth } from '@/stores/auth';
 import { Eyebrow } from '@/components/ui';
@@ -71,7 +72,7 @@ export function ImageUpload({
     }
   }
 
-  const mostrada = preview ?? value;
+  const mostrada = preview ?? imageSrc(value);
 
   return (
     <div className="flex flex-col gap-2">

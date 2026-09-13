@@ -112,7 +112,11 @@ export function CustomiseSheet({
 
   useEffect(() => () => clearTimeout(fallback.current), []);
 
-  const custom = Boolean(prefill?.build);
+  // A product that is a CRM recipe is ordered as that formula: priced by it,
+  // drawn from it, and recorded against the recipe, so ordering it once is
+  // enough for it to come back as a usual.
+  const linked = product?.recipe ?? null;
+  const custom = Boolean(prefill?.build || linked);
   const drink = product
     ? custom ||
       isDrink(
@@ -126,7 +130,11 @@ export function CustomiseSheet({
 
   const baseBuild = useMemo<Build | null>(() => {
     if (!product) return null;
-    return prefill?.build ?? buildForProduct(product, [...signatures, ...seasonals]);
+    return (
+      prefill?.build ??
+      (linked?.build as Build | undefined) ??
+      buildForProduct(product, [...signatures, ...seasonals])
+    );
   }, [product, prefill?.build, signatures, seasonals]);
 
   const build = useMemo(
@@ -193,7 +201,7 @@ export function CustomiseSheet({
       if (custom) {
         addItem(product!, {
           build: build!,
-          recipeId: prefill?.recipeId ?? undefined,
+          recipeId: prefill?.recipeId ?? linked?.slug ?? undefined,
           label: name,
           note,
         });

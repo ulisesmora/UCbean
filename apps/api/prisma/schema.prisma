@@ -109,6 +109,10 @@ model Product {
 
   category   Category    @relation(fields: [categoryId], references: [id])
   orderItems OrderItem[]
+
+  /// Set when this menu row is a recipe. Its name, description and price
+  /// then come from the recipe, kept in sync by the recipes service.
+  recipe     Recipe?
 }
 
 model Order {
@@ -329,6 +333,11 @@ model Recipe {
   activeTo   DateTime?
   isActive   Boolean   @default(true)
   sortOrder  Int       @default(0)
+
+  /// The product this recipe is sold as: what goes on the menu, in the bag
+  /// and on the ticket. Created and kept in sync by the recipes service.
+  productId String?  @unique
+  product   Product? @relation(fields: [productId], references: [id], onDelete: SetNull)
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt

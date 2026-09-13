@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { Injectable, Logger, NotFoundException, OnModuleInit } from '@nestjs/common';
 import { PrismaService } from '../../../../prisma/prisma.service';
 import type { DrinkBuild } from '../../../orders/domain/value-objects/drink-build';
 import { describeBuild, priceOfBuild } from '../../../orders/domain/value-objects/drink-price';
@@ -11,9 +11,35 @@ import { describeBuild, priceOfBuild } from '../../../orders/domain/value-object
  * eso el precio se calcula y no se teclea, y por eso el menú y el
  * configurador no pueden discrepar sobre cuánto cuesta un latte.
  */
+/** What a recipe shows of its product: the menu row it is sold as. */
+const PRODUCT = { select: { id: true, imageUrl: true, categoryId: true } } as const;
+
+/** Fields that belong to the product, not the recipe row. */
+type ProductFields = { categoryId?: string | null; imageUrl?: string | null };
+
 @Injectable()
-export class RecipesService {
+export class RecipesService implements OnModuleInit {
+  private readonly logger = new Logger(RecipesService.name);
+
   constructor(private readonly prisma: PrismaService) {}
+
+  /**
+   * Every recipe is sold as a product.
+   *
+   * On boot, a recipe without one (created before this existed, seeded, or
+   * whose product was deleted) gets it, and every linked product takes its
+   * price from the formula again, so a change in the ingredient prices reaches
+   * the menu without anyone re-saving each recipe. A database that is not
+   * reachable yet only logs: the API still starts.
+   */
+  async onModuleInit() {
+    try {
+      const rows = await this.prisma.recipe.findMany();
+      for (const row of rows) await this.syncProduct(row, {});
+    } catch (e) {
+      this.logger.warn(`Recipe products not synced: ${(e as Error).message}`);
+    }
+  }
 
   /**
    * Lo que se sirve hoy.
@@ -33,6 +59,7 @@ export class RecipesService {
         ],
       },
       orderBy: [{ kind: 'asc' }, { sortOrder: 'asc' }, { name: 'asc' }],
+      include: { product: PRODUCT },
     });
     return rows.map((r) => this.decorate(r));
   }
@@ -73,6 +100,7 @@ export class RecipesService {
     const slugs = ventas.map((v) => v.recipeId!).filter(Boolean);
     const recetas = await this.prisma.recipe.findMany({
       where: { slug: { in: slugs }, isActive: true },
+      include: { product: PRODUCT },
     });
 
     // Se reordena según las ventas: el `findMany` devuelve en su orden, no
@@ -87,7 +115,10 @@ export class RecipesService {
   }
 
   async bySlug(slug: string) {
-    const row = await this.prisma.recipe.findUnique({ where: { slug } });
+    const row = await this.prisma.recipe.findUnique({
+      where: { slug },
+      include: { product: PRODUCT },
+    });
     if (!row) throw new NotFoundException(`No tenemos ninguna receta llamada ${slug}`);
     return this.decorate(row);
   }
@@ -96,18 +127,97 @@ export class RecipesService {
   async all() {
     const rows = await this.prisma.recipe.findMany({
       orderBy: [{ kind: 'asc' }, { sortOrder: 'asc' }],
+      include: { product: PRODUCT },
     });
     return rows.map((r) => this.decorate(r));
   }
 
-  async create(data: Record<string, unknown>) {
+  async create(input: Record<string, unknown> & ProductFields) {
+    const { categoryId, imageUrl, ...data } = input;
     const row = await this.prisma.recipe.create({ data: data as never });
-    return this.decorate(row);
+    await this.syncProduct(row, { categoryId, imageUrl });
+    return this.bySlug(row.slug);
   }
 
-  async update(id: string, data: Record<string, unknown>) {
+  async update(id: string, input: Record<string, unknown> & ProductFields) {
+    const { categoryId, imageUrl, ...data } = input;
     const row = await this.prisma.recipe.update({ where: { id }, data: data as never });
-    return this.decorate(row);
+    await this.syncProduct(row, { categoryId, imageUrl });
+    return this.bySlug(row.slug);
+  }
+
+  /**
+   * Creates or updates the product a recipe is sold as.
+   *
+   * Name, description and price always follow the recipe; the price is the
+   * formula's, the same figure an order is charged. Availability is left
+   * alone on purpose: "sold out" is set on the product from the counter, and
+   * the recipe's own switch and dates are applied when the menu is read.
+   *
+   * A product with the same name that no recipe owns yet is adopted rather
+   * than duplicated, so a drink that was already on the menu keeps its photo,
+   * its order history and its place.
+   */
+  private async syncProduct(
+    recipe: {
+      id: string;
+      name: string;
+      note: string;
+      kind: string;
+      build: unknown;
+      productId: string | null;
+    },
+    extra: ProductFields,
+  ): Promise<string> {
+    const data = {
+      name: recipe.name,
+      description: recipe.note,
+      price: priceOfBuild(recipe.build as DrinkBuild),
+      ...(extra.categoryId ? { categoryId: extra.categoryId } : {}),
+      // undefined leaves the photo as it is; null removes it.
+      ...(extra.imageUrl !== undefined ? { imageUrl: extra.imageUrl } : {}),
+    };
+
+    if (recipe.productId) {
+      const linked = await this.prisma.product.findUnique({
+        where: { id: recipe.productId },
+        select: { id: true },
+      });
+      if (linked) {
+        await this.prisma.product.update({ where: { id: linked.id }, data });
+        return linked.id;
+      }
+    }
+
+    const twin = await this.prisma.product.findFirst({
+      where: { name: { equals: recipe.name, mode: 'insensitive' }, recipe: { is: null } },
+      select: { id: true },
+    });
+    const productId = twin
+      ? (await this.prisma.product.update({ where: { id: twin.id }, data })).id
+      : (
+          await this.prisma.product.create({
+            data: {
+              ...data,
+              categoryId: extra.categoryId || (await this.defaultCategory(recipe.kind)),
+            },
+          })
+        ).id;
+
+    await this.prisma.recipe.update({ where: { id: recipe.id }, data: { productId } });
+    return productId;
+  }
+
+  /** Where a recipe is listed when nobody picked a section for it. */
+  private async defaultCategory(kind: string): Promise<string> {
+    const name = kind === 'SEASONAL' ? 'Seasonal Drinks' : 'Signature Drinks';
+    const category = await this.prisma.category.upsert({
+      where: { name },
+      update: {},
+      create: { name },
+      select: { id: true },
+    });
+    return category.id;
   }
 
   /**
@@ -117,8 +227,21 @@ export class RecipesService {
    * guardaran, subir el precio del grano dejaría el menú mintiendo hasta
    * que alguien recalculara cada receta a mano.
    */
-  private decorate<T extends { build: unknown }>(row: T) {
+  private decorate<
+    T extends {
+      build: unknown;
+      product?: { id: string; imageUrl: string | null; categoryId: string } | null;
+    },
+  >(row: T) {
     const build = row.build as DrinkBuild;
-    return { ...row, price: priceOfBuild(build), ticket: describeBuild(build) };
+    return {
+      ...row,
+      price: priceOfBuild(build),
+      ticket: describeBuild(build),
+      // The product it is sold as: what the web adds to the bag and shows.
+      productId: row.product?.id ?? null,
+      imageUrl: row.product?.imageUrl ?? null,
+      categoryId: row.product?.categoryId ?? null,
+    };
   }
 }

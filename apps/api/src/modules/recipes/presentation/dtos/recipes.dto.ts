@@ -5,6 +5,7 @@ import {
   IsInt,
   IsOptional,
   IsString,
+  IsUUID,
   Matches,
   MaxLength,
   ValidateNested,
@@ -73,6 +74,19 @@ export class CreateRecipeDto {
   @IsInt()
   @Type(() => Number)
   sortOrder?: number;
+
+  @ApiPropertyOptional({
+    description: 'Menu section it is sold under. Blank means Signature Drinks or Seasonal Drinks.',
+  })
+  @IsOptional()
+  @IsUUID()
+  categoryId?: string | null;
+
+  @ApiPropertyOptional({ description: 'Photo for its menu card. null removes it.' })
+  @IsOptional()
+  @IsString()
+  @MaxLength(500)
+  imageUrl?: string | null;
 }
 
 export class UpdateRecipeDto extends CreateRecipeDto {}
