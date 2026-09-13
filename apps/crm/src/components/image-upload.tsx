@@ -3,7 +3,10 @@ import { ImagePlus, Loader2, X } from 'lucide-react';
 import { useAuth } from '@/stores/auth';
 import { Eyebrow } from '@/components/ui';
 
-const BASE = import.meta.env.VITE_API_URL ?? '/api/v1';
+// Same rule as lib/api.ts: blank counts as unset, production falls back to Railway.
+const BASE =
+  import.meta.env.VITE_API_URL ||
+  (import.meta.env.PROD ? 'https://ucbean-production.up.railway.app/api/v1' : '/api/v1');
 
 export interface Uploaded {
   url: string;

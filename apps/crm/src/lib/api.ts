@@ -7,7 +7,12 @@ import { useAuth } from '@/stores/auth';
  * origen y la cookie de refresco viaja sin pelearse con SameSite. En
  * producción esto apunta al dominio de la API.
  */
-const BASE = import.meta.env.VITE_API_URL ?? '/api/v1';
+// `||`, not `??`: an empty VITE_API_URL (a blank variable on Vercel) used to
+// compile to '' and send every request to the CRM's own domain. A production
+// build with no value talks to the Railway API; dev keeps the Vite proxy.
+const BASE =
+  import.meta.env.VITE_API_URL ||
+  (import.meta.env.PROD ? 'https://ucbean-production.up.railway.app/api/v1' : '/api/v1');
 
 export class ApiError extends Error {
   constructor(

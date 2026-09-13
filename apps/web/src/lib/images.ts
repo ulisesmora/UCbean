@@ -1,4 +1,9 @@
-const BASE = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:3000/api/v1';
+// Same rule as lib/api.ts: blank counts as unset, production falls back to Railway.
+const BASE =
+  process.env.NEXT_PUBLIC_API_URL ||
+  (process.env.NODE_ENV === 'production'
+    ? 'https://ucbean-production.up.railway.app/api/v1'
+    : 'http://localhost:3000/api/v1');
 
 /** El origen del API, sin el `/api/v1`: de ahí cuelga el CDN de imágenes. */
 const ORIGIN = BASE.replace(/\/api\/v\d+\/?$/, '');
