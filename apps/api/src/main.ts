@@ -60,8 +60,15 @@ async function bootstrap() {
   app.useGlobalFilters(new HttpExceptionFilter());
   app.useGlobalInterceptors(new ResponseInterceptor());
 
+  // Browsers send the Origin with no trailing slash, so "https://site.app/" in
+  // the variable would never match and every request from it would be
+  // blocked. Spaces and trailing slashes are trimmed, empty entries dropped.
+  // Without the variable any origin is allowed, which is only for local dev.
+  const origins = process.env.CORS_ORIGIN?.split(',')
+    .map((o) => o.trim().replace(/\/+$/, ''))
+    .filter(Boolean);
   app.enableCors({
-    origin: process.env.CORS_ORIGIN?.split(',') ?? true,
+    origin: origins?.length ? origins : true,
     credentials: true,
   });
 
