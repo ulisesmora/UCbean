@@ -33,4 +33,7 @@ WORKDIR /app/apps/api
 
 # tsconfig includes prisma/, so Nest builds to dist/src, not dist.
 # Pending migrations are applied on every boot; `migrate deploy` never resets.
-CMD ["sh", "-c", "node_modules/.bin/prisma migrate deploy && node dist/src/main.js"]
+# Startup preflight. Prints the NAMES of the variables this container received
+# (never their values), so a missing one is visible in the deploy log instead
+# of surfacing later as a Prisma error.
+CMD ["sh", "-c", "echo \"[boot] variables received: $(env | cut -d= -f1 | sort | tr '\n' ' ')\"; if [ -z \"$DATABASE_URL\" ]; then echo '[boot] DATABASE_URL is not set in this service. Railway: API service > Variables > add DATABASE_URL as a reference to Postgres, then Deploy.'; exit 1; fi; node_modules/.bin/prisma migrate deploy && node dist/src/main.js"]

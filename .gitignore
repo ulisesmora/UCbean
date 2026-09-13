@@ -7,12 +7,6 @@ dist/
 apps/web/.next/
 apps/web/out/
 
-# ── Environment — NEVER commit real secrets ───────────────
-.env
-.env.local
-.env.*.local
-apps/api/.env
-apps/web/.env.local
 
 # ── Prisma generated (regenerated on pnpm install) ────────
 apps/api/node_modules/.prisma/
@@ -45,6 +39,3 @@ pgdata/
 # Fotos de producto subidas desde el CRM. Son datos, no codigo.
 apps/api/uploads/
 
-# Per-environment files hold real keys too.
-.env.development
-.env.production
