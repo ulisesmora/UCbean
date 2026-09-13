@@ -17,13 +17,15 @@ RUN pnpm --filter @ucbean/api build
 
 # --- runner ---
 FROM node:22-alpine AS runner
-WORKDIR /app
-
 ENV NODE_ENV=production
 
-COPY --from=builder /app/node_modules          ./node_modules
-COPY --from=builder /app/apps/api/dist         ./apps/api/dist
-COPY --from=builder /app/apps/api/prisma       ./apps/api/prisma
-COPY --from=builder /app/node_modules/.prisma  ./node_modules/.prisma
+# The whole workspace. pnpm links each app's dependencies out of the root
+# store through apps/api/node_modules, so copying only the root node_modules
+# (as this used to) leaves the API unable to resolve a single package. The
+# Prisma client is generated inside that store too, not in node_modules/.prisma.
+COPY --from=builder /app /app
+WORKDIR /app/apps/api
 
-CMD ["node", "apps/api/dist/main.js"]
+# tsconfig includes prisma/, so Nest builds to dist/src, not dist.
+# Pending migrations are applied on every boot; `migrate deploy` never resets.
+CMD ["sh", "-c", "node_modules/.bin/prisma migrate deploy && node dist/src/main.js"]

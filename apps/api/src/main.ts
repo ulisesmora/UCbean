@@ -2,6 +2,10 @@ import { NestFactory } from '@nestjs/core';
 import { FastifyAdapter, NestFastifyApplication } from '@nestjs/platform-fastify';
 import { ValidationPipe } from '@nestjs/common';
 import fastifyCookie from '@fastify/cookie';
+import fastifyMultipart from '@fastify/multipart';
+import fastifyStatic from '@fastify/static';
+import { join } from 'node:path';
+import { mkdirSync } from 'node:fs';
 import { SwaggerModule, DocumentBuilder } from '@nestjs/swagger';
 import { AppModule } from './app.module';
 import { HttpExceptionFilter } from './common/filters/http-exception.filter';
@@ -11,10 +15,44 @@ async function bootstrap() {
   const app = await NestFactory.create<NestFastifyApplication>(
     AppModule,
     new FastifyAdapter({ logger: process.env.NODE_ENV !== 'production' }),
+    // El webhook de Stripe se firma sobre los bytes exactos que llegaron.
+    // Parsear el JSON y volver a serializarlo cambia espacios y la firma
+    // deja de cuadrar, así que Nest guarda el cuerpo original en
+    // `req.rawBody`. Es una opción del framework: escribir un parser a
+    // mano choca con el que Nest registra después.
+    { rawBody: true },
   );
 
   await app.register(fastifyCookie as any, {
     secret: process.env.COOKIE_SECRET,
+  });
+
+  // Subida de fotos de producto. El límite se repite en el servicio con
+  // un mensaje legible; aquí es la barrera dura que corta la lectura.
+  await app.register(fastifyMultipart as any, {
+    limits: { fileSize: 5 * 1024 * 1024, files: 1 },
+  });
+
+  /**
+   * Las imágenes, servidas por el propio backend.
+   *
+   * El nombre de cada archivo sale de su contenido, así que una URL
+   * siempre devuelve los mismos bytes. Por eso se puede marcar como
+   * inmutable un año: el navegador no vuelve a pedirla nunca, y si la
+   * foto cambia, cambia la URL. Es lo que hace un CDN, sin contratar uno.
+   */
+  const uploads = process.env.UPLOADS_DIR ?? join(process.cwd(), 'uploads');
+  mkdirSync(uploads, { recursive: true });
+  await app.register(fastifyStatic as any, {
+    root: uploads,
+    prefix: '/uploads/',
+    decorateReply: false,
+    cacheControl: true,
+    maxAge: '365d',
+    immutable: true,
+    index: false,
+    // Nada de listar carpetas: la URL se conoce o no se conoce.
+    list: false,
   });
 
   app.setGlobalPrefix('api/v1');

@@ -2,8 +2,9 @@
 
 import dynamic from 'next/dynamic';
 import { useEffect, useMemo, useState } from 'react';
-import { SEASONALS, SIGNATURES, recipePrice, recipeScene, type Recipe } from '@/lib/recipes';
+import { recipePrice, recipeScene, type Recipe } from '@/lib/recipes';
 import { useWebglStage } from '@/hooks/use-webgl-stage';
+import { useBestSellers, useLiveRecipes } from '@/hooks/use-recipes';
 
 // One 3D scene now serves the whole site, so there is a single cup to maintain
 // and a single WebGL context to pay for.
@@ -11,20 +12,34 @@ const BuilderCup = dynamic(() => import('@/components/features/builder/builder-c
   ssr: false,
 });
 
-const TABS = [
-  { id: 'signature', label: 'Our drinks' },
-  { id: 'seasonal', label: 'Seasonal' },
-] as const;
+type Tab = 'signature' | 'seasonal' | 'popular';
+
+/** Una receta con lo que se vendió, cuando viene del ranking. */
+type Listed = Recipe & { sold?: number };
 
 export function SeasonalShowcase() {
-  const [tab, setTab] = useState<'signature' | 'seasonal'>('signature');
+  const [tab, setTab] = useState<Tab>('signature');
   const [index, setIndex] = useState(0);
   const [animate, setAnimate] = useState(true);
   const { ref: stage, mounted: visible, generation } = useWebglStage<HTMLDivElement>();
 
-  const list: Recipe[] = tab === 'signature' ? SIGNATURES : SEASONALS;
+  // El menú lo manda el CRM: una bebida de temporada programada ahí aparece
+  // aquí sola. La lista local solo entra si el API no tiene nada.
+  const { signatures, seasonals } = useLiveRecipes();
+  const { bestSellers } = useBestSellers(6);
+
+  // La pestaña solo existe cuando hay ventas que la respalden. Un «lo más
+  // pedido» de una cafetería que abrió ayer no significa nada.
+  const tabs: { id: Tab; label: string }[] = [
+    { id: 'signature', label: 'Our drinks' },
+    { id: 'seasonal', label: 'Seasonal' },
+    ...(bestSellers.length > 0 ? [{ id: 'popular' as Tab, label: 'Most ordered' }] : []),
+  ];
+
+  const list: Listed[] =
+    tab === 'signature' ? signatures : tab === 'seasonal' ? seasonals : bestSellers;
   const drink = list[Math.min(index, list.length - 1)];
-  const scene = useMemo(() => recipeScene(drink), [drink]);
+  const scene = useMemo(() => (drink ? recipeScene(drink) : null), [drink]);
 
   useEffect(() => {
     const mq = window.matchMedia('(prefers-reduced-motion: reduce)');
@@ -61,7 +76,7 @@ export function SeasonalShowcase() {
         </div>
 
         <div className="mb-8 flex flex-wrap gap-3" role="tablist" aria-label="Drink lists">
-          {TABS.map((t) => (
+          {tabs.map((t) => (
             <button
               key={t.id}
               type="button"
@@ -82,7 +97,7 @@ export function SeasonalShowcase() {
           {/* The pour */}
           <div ref={stage} className="relative md:col-span-6">
             <div className="rule aspect-[4/3] w-full overflow-hidden bg-birch-100 shadow-hard-lg sm:aspect-square md:aspect-[4/5]">
-              {visible ? (
+              {visible && scene ? (
                 <BuilderCup
                   // Remounting on the drink replays the whole build.
                   key={`${generation}-${drink.id}`}
@@ -97,10 +112,12 @@ export function SeasonalShowcase() {
 
             <div className="slab-acid pointer-events-none absolute -bottom-6 left-6 flex items-baseline gap-2.5 px-5 py-2.5">
               <span className="font-mono text-lg font-bold tabular-nums text-stone2-900">
-                ${recipePrice(drink).toFixed(2)}
+                ${drink ? recipePrice(drink).toFixed(2) : '—'}
               </span>
               <span className="font-mono text-[11px] uppercase tracking-[0.18em] text-stone2-900/70">
-                {drink.season ?? 'All year'}
+                {tab === 'popular' && drink?.sold
+                  ? `${drink.sold} ordered this month`
+                  : (drink?.season ?? 'All year')}
               </span>
             </div>
           </div>
@@ -109,7 +126,7 @@ export function SeasonalShowcase() {
           <div className="md:col-span-6">
             <ul className="rule divide-y-2 divide-stone2-900 bg-birch-50">
               {list.map((d, i) => {
-                const active = d.id === drink.id;
+                const active = d.id === drink?.id;
                 return (
                   <li key={d.id}>
                     <button
@@ -129,6 +146,11 @@ export function SeasonalShowcase() {
                           backgroundColor: active ? recipeScene(d).liquid : 'transparent',
                         }}
                       />
+                      {tab === 'popular' && (
+                        <span className="shrink-0 font-mono text-[13px] font-bold tabular-nums text-stone2-400">
+                          {String(i + 1).padStart(2, '0')}
+                        </span>
+                      )}
                       <span className="min-w-0 flex-1">
                         <span className="flex items-baseline gap-2">
                           <span className="font-seal text-lg leading-tight text-stone2-900">
@@ -155,10 +177,22 @@ export function SeasonalShowcase() {
               })}
             </ul>
 
-            <a href="/menu" className="btn mt-8 inline-flex min-h-[44px] px-6 text-[14px]">
-              See the full menu
-              <span aria-hidden="true">&rarr;</span>
-            </a>
+            {/* Aqui es donde el configurador tiene sentido: ya has elegido una
+                bebida y quieres cambiarle la leche, no empezar de cero. */}
+            <div className="mt-8 flex flex-wrap gap-3">
+              {drink && (
+                <a
+                  href={`/build?recipe=${drink.id}`}
+                  className="btn btn-acid inline-flex min-h-[44px] px-6 text-[14px]"
+                >
+                  Make this one yours
+                </a>
+              )}
+              <a href="/menu" className="btn inline-flex min-h-[44px] px-6 text-[14px]">
+                See the full menu
+                <span aria-hidden="true">&rarr;</span>
+              </a>
+            </div>
           </div>
         </div>
       </div>

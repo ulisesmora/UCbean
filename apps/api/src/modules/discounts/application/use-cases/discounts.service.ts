@@ -1,3 +1,4 @@
+import type { Tx } from '../../../../prisma/transaction';
 import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
 import { randomBytes } from 'node:crypto';
 import { PrismaService } from '../../../../prisma/prisma.service';
@@ -49,15 +50,24 @@ export class DiscountsService {
    * motivo en palabras cuando no vale, porque «código inválido» hace que
    * el cliente lo intente tres veces y luego escriba a preguntar.
    */
-  async preview(code: string, userId: string, orderTotal: number): Promise<AppliedDiscount> {
-    const discount = await this.prisma.discount.findUnique({
+  async preview(
+    code: string,
+    userId: string,
+    orderTotal: number,
+    tx?: Tx,
+  ): Promise<AppliedDiscount> {
+    // Dentro de la transacción del pedido, el conteo de usos y la inserción
+    // del canje ven la misma foto de la base. Fuera, dos pedidos podrían
+    // contar «queda un uso» a la vez y gastarlo dos veces.
+    const db = tx ?? this.prisma;
+    const discount = await db.discount.findUnique({
       where: { code: code.trim().toUpperCase() },
     });
-    if (!discount) throw new NotFoundException('Ese código no existe');
+    if (!discount) throw new NotFoundException('That code does not exist');
 
     const [globalUses, userUses] = await Promise.all([
-      this.prisma.discountRedemption.count({ where: { discountId: discount.id } }),
-      this.prisma.discountRedemption.count({ where: { discountId: discount.id, userId } }),
+      db.discountRedemption.count({ where: { discountId: discount.id } }),
+      db.discountRedemption.count({ where: { discountId: discount.id, userId } }),
     ]);
 
     const rule = toRule(discount);
@@ -83,9 +93,10 @@ export class DiscountsService {
     userId: string,
     orderTotal: number,
     orderId: string,
+    tx?: Tx,
   ): Promise<AppliedDiscount> {
-    const applied = await this.preview(code, userId, orderTotal);
-    await this.prisma.discountRedemption.create({
+    const applied = await this.preview(code, userId, orderTotal, tx);
+    await (tx ?? this.prisma).discountRedemption.create({
       data: {
         discountId: applied.discountId,
         userId,

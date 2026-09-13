@@ -11,6 +11,9 @@ export class OrderItemResponseDto {
   @Expose() recipeId: string | null;
   @Expose() name: string | null;
   @Expose() ticket: string | null;
+  @Expose() imageUrl: string | null;
+  @Expose() extras: string[];
+  @Expose() vessel: string | null;
 }
 
 export class OrderResponseDto {

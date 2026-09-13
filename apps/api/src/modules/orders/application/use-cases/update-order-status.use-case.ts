@@ -1,4 +1,10 @@
-import { Inject, Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
+import {
+  BadRequestException,
+  ConflictException,
+  Inject,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 import { EventEmitter2 } from '@nestjs/event-emitter';
 import {
   IOrderRepository,
@@ -22,7 +28,14 @@ export class UpdateOrderStatusUseCase {
       throw new BadRequestException(`Cannot transition order from ${order.status} to ${status}`);
     }
 
-    const updated = await this.orders.updateStatus(id, status, note);
+    const updated = await this.orders.transition(id, order.status, status, note);
+
+    // Dos personas en la barra pulsan a la vez. La segunda no puede avanzar
+    // un pedido que ya no está donde ella lo vio: se le dice, y su pantalla
+    // se recarga con el estado real.
+    if (!updated) {
+      throw new ConflictException('Someone just changed this order. Check where it is now.');
+    }
 
     // De aquí cuelgan el aviso al cliente y los puntos del pedido. Los
     // dos van después de escribir, nunca antes.

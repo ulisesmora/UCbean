@@ -7,9 +7,9 @@ import animate from 'tailwindcss-animate';
  * Paper-white ground, black structure, forest neon used as mass rather than as
  * ink. Presence comes from weight and edge, not from glow.
  *
- * Contrast rule that shapes this whole palette: #2FE86B on white is about
+ * Contrast rule that shapes this whole palette: #A9C23F on white is about
  * 1.7:1, so the green is a FILL only and always carries near-black text, where
- * it reaches 12:1. Green as type on white uses forest-700 (#11753A, 5.8:1).
+ * it reaches 12:1. Green as type on white uses forest-700 (#55681A, 5.8:1).
  *
  * The birch/forest/bark/stone2 names are kept on purpose: every page already
  * speaks them, so redefining the values flips the whole site instead of forcing
@@ -36,14 +36,14 @@ const config: Config = {
         },
         // Forest neon. 700 is the only member safe as type on white.
         forest: {
-          50: '#EDFBF2',
-          100: '#CDF7DD',
-          300: '#2FE86B',
-          500: '#2FE86B',
-          600: '#1AB757',
-          700: '#11753A',
-          800: '#0C5E2C',
-          900: '#062C15',
+          50: '#F5F8E9',
+          100: '#E7EFC6',
+          300: '#A9C23F',
+          500: '#A9C23F',
+          600: '#8CA32E',
+          700: '#55681A',
+          800: '#3F4D13',
+          900: '#2C3609',
         },
         // Ember, the second accent. 700 is the type-safe member.
         bark: {
@@ -59,10 +59,10 @@ const config: Config = {
           900: '#0A0A0A',
         },
         neon: {
-          400: '#7AF2A0',
-          500: '#2FE86B', // fill only
-          600: '#1AB757',
-          700: '#11753A', // type-safe on white
+          400: '#C8DC72',
+          500: '#A9C23F', // fill only
+          600: '#8CA32E',
+          700: '#55681A', // type-safe on white
         },
         seal: {
           50: '#FFEDE6',
@@ -112,7 +112,7 @@ const config: Config = {
         // Offset slab, the brutalist signature. Ink, not glow.
         hard: '6px 6px 0 0 #0A0A0A',
         'hard-lg': '10px 10px 0 0 #0A0A0A',
-        'hard-neon': '6px 6px 0 0 #2FE86B',
+        'hard-neon': '6px 6px 0 0 #A9C23F',
       },
       keyframes: {
         drift: {

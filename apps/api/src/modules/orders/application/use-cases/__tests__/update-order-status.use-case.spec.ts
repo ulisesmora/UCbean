@@ -1,4 +1,4 @@
-import { BadRequestException, NotFoundException } from '@nestjs/common';
+import { BadRequestException, ConflictException, NotFoundException } from '@nestjs/common';
 import { UpdateOrderStatusUseCase } from '../update-order-status.use-case';
 import { IOrderRepository } from '../../../domain/repositories/order.repository.interface';
 import { OrderEntity, OrderItemEntity } from '../../../domain/entities/order.entity';
@@ -28,6 +28,7 @@ describe('UpdateOrderStatusUseCase', () => {
       findByUser: jest.fn(),
       create: jest.fn(),
       updateStatus: jest.fn(),
+      transition: jest.fn(),
     };
     events = { emit: jest.fn() };
     useCase = new UpdateOrderStatusUseCase(repo, events as any);
@@ -37,11 +38,13 @@ describe('UpdateOrderStatusUseCase', () => {
     const order = makeOrder('PENDING');
     const confirmed = makeOrder('CONFIRMED');
     repo.findById.mockResolvedValue(order);
-    repo.updateStatus.mockResolvedValue(confirmed);
+    repo.transition.mockResolvedValue(confirmed);
 
     const result = await useCase.execute('ord-1', 'CONFIRMED');
     expect(result.status).toBe('CONFIRMED');
-    expect(repo.updateStatus).toHaveBeenCalledWith('ord-1', 'CONFIRMED', undefined);
+    // El estado de origen va en la llamada: es la condición que impide que
+    // dos personas avancen el mismo pedido a la vez.
+    expect(repo.transition).toHaveBeenCalledWith('ord-1', 'PENDING', 'CONFIRMED', undefined);
   });
 
   it('throws NotFoundException when order not found', async () => {
@@ -57,5 +60,16 @@ describe('UpdateOrderStatusUseCase', () => {
   it('throws BadRequestException for invalid transition (PENDING → COMPLETED)', async () => {
     repo.findById.mockResolvedValue(makeOrder('PENDING'));
     await expect(useCase.execute('ord-1', 'COMPLETED')).rejects.toThrow(BadRequestException);
+  });
+
+  it('si otra persona ya lo cambió, devuelve conflicto y no anuncia nada', async () => {
+    // Dos personas en la barra pulsan «Empezar» a la vez. Las dos leen
+    // CONFIRMED, pero la escritura condicional solo deja pasar a una: la
+    // otra recibe null del repositorio.
+    repo.findById.mockResolvedValue(makeOrder('CONFIRMED'));
+    repo.transition.mockResolvedValue(null);
+
+    await expect(useCase.execute('ord-1', 'PREPARING')).rejects.toThrow(ConflictException);
+    expect(events.emit).not.toHaveBeenCalled();
   });
 });

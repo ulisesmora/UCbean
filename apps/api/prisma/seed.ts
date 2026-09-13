@@ -1,5 +1,6 @@
 import { PrismaClient } from '@prisma/client';
 import { createHash } from 'node:crypto';
+import * as bcrypt from 'bcryptjs';
 
 const prisma = new PrismaClient();
 
@@ -36,6 +37,88 @@ const MENU = [
         name: 'Build your own',
         price: 0,
         description: 'Beans, size, milk, foam and extras, exactly how you want them',
+      },
+    ],
+  },
+  {
+    category: 'Pastries',
+    products: [
+      {
+        key: 'Bollería:Croissant de mantequilla',
+        name: 'Butter croissant',
+        price: 3.75,
+        description: 'Laminated over three days, baked every morning',
+      },
+      {
+        key: 'Bollería:Pain au chocolat',
+        name: 'Pain au chocolat',
+        price: 4.25,
+        description: 'Two bars of dark chocolate',
+      },
+      {
+        key: 'Bollería:Rol de canela',
+        name: 'Cinnamon roll',
+        price: 4.5,
+        description: 'Cream cheese glaze',
+      },
+      {
+        key: 'Bollería:Scone de arándano',
+        name: 'Blueberry scone',
+        price: 3.5,
+        description: 'With Fraser Valley blueberries',
+      },
+      {
+        key: 'Bollería:Banana bread',
+        name: 'Banana bread',
+        price: 3.25,
+        description: 'Thick slice, with walnuts',
+      },
+      {
+        key: 'Bollería:Galleta de chocolate',
+        name: 'Chocolate chip cookie',
+        price: 2.75,
+        description: 'Sea salt on top',
+      },
+    ],
+  },
+  {
+    category: 'Food',
+    products: [
+      {
+        key: 'Comida:Sándwich de huevo',
+        name: 'Egg sandwich',
+        price: 7.5,
+        description: 'Egg, aged cheese and pickled onion on brioche',
+      },
+      {
+        key: 'Comida:Tostada de aguacate',
+        name: 'Avocado toast',
+        price: 8.5,
+        description: 'Sourdough, lemon, chili and seeds',
+      },
+      {
+        key: 'Comida:Bagel de salmón',
+        name: 'Salmon bagel',
+        price: 11.0,
+        description: 'House-cured salmon, cream cheese and capers',
+      },
+      {
+        key: 'Comida:Ensalada de quinoa',
+        name: 'Quinoa salad',
+        price: 9.5,
+        description: 'Roasted squash, feta and yuzu vinaigrette',
+      },
+      {
+        key: 'Comida:Sopa del día',
+        name: 'Soup of the day',
+        price: 6.5,
+        description: 'Ask at the bar. Comes with bread',
+      },
+      {
+        key: 'Comida:Wrap de pollo',
+        name: 'Chicken wrap',
+        price: 10.0,
+        description: 'Charred chicken, romaine and aioli',
       },
     ],
   },
@@ -108,7 +191,11 @@ async function main() {
     });
 
     for (const p of section.products) {
-      const id = stableUuid(`ucbean:product:${section.category}:${p.name}`);
+      // La `key` guarda el identificador de siempre en los productos que se
+      // renombraron: el id no puede cambiar porque cambie el texto de la carta.
+      const id = stableUuid(
+        `ucbean:product:${'key' in p && p.key ? p.key : `${section.category}:${p.name}`}`,
+      );
       await prisma.product.upsert({
         where: { id },
         update: { price: p.price, description: p.description },
@@ -143,7 +230,63 @@ async function main() {
     });
   }
 
+  await seedOwner();
+
   console.log('Seed complete.');
+}
+
+/**
+ * El dueño, para poder entrar al mostrador.
+ *
+ * Va en la semilla y no en una migración a propósito: una migración es
+ * SQL estático, así que la contraseña acabaría escrita en git para
+ * siempre y se crearía sola en producción al desplegar. Aquí se lee del
+ * entorno, se cifra al vuelo, y en producción el arranque exige que
+ * `OWNER_PASSWORD` esté puesta en vez de inventar una conocida.
+ *
+ * Es idempotente: volver a sembrar no pisa la contraseña de un dueño que
+ * ya existe, solo se asegura de que tenga el rol.
+ */
+async function seedOwner() {
+  const email = process.env.OWNER_EMAIL ?? 'dueno@aroundthebean.ca';
+  const enProduccion = process.env.NODE_ENV === 'production';
+  const password = process.env.OWNER_PASSWORD;
+
+  if (enProduccion && !password) {
+    throw new Error(
+      'OWNER_PASSWORD is missing. Production never creates an owner with a known password.',
+    );
+  }
+
+  const existente = await prisma.user.findUnique({ where: { email } });
+
+  if (existente) {
+    if (existente.role !== 'OWNER') {
+      await prisma.user.update({ where: { email }, data: { role: 'OWNER' } });
+      console.log(`Dueño: ${email} ascendido a OWNER.`);
+    } else {
+      console.log(`Dueño: ${email} ya existe, no se toca su contraseña.`);
+    }
+    return;
+  }
+
+  const clave = password ?? 'Mostrador!2026';
+  await prisma.user.create({
+    data: {
+      email,
+      name: process.env.OWNER_NAME ?? 'Dueño',
+      passwordHash: await bcrypt.hash(clave, 12),
+      role: 'OWNER',
+      // El dueño no tiene que validar su correo para entrar a su propio
+      // mostrador el primer día.
+      emailVerifiedAt: new Date(),
+    },
+  });
+
+  console.log(`Dueño creado: ${email}`);
+  if (!password) {
+    console.log(`   Contraseña: ${clave}  <-- cámbiala antes de salir a producción`);
+  }
 }
 
 main()

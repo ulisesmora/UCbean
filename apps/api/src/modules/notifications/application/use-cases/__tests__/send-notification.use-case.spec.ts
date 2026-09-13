@@ -1,11 +1,15 @@
 import { SendNotificationUseCase } from '../send-notification.use-case';
 import type { IMailer } from '../../../domain/ports/mailer.port';
+import type { PushSender } from '../../../infrastructure/push/push.sender';
+import type { SmsSender } from '../../../infrastructure/sms/sms.sender';
 
 const MENSAJE = { title: 'Pedido confirmado', body: 'Ya lo estamos preparando.' };
 
 describe('SendNotificationUseCase', () => {
   let prisma: any;
   let mailer: jest.Mocked<IMailer>;
+  let push: { sendToUser: jest.Mock };
+  let sms: { send: jest.Mock };
   let useCase: SendNotificationUseCase;
 
   beforeEach(() => {
@@ -14,11 +18,18 @@ describe('SendNotificationUseCase', () => {
       notification: { create: jest.fn().mockResolvedValue({}) },
     };
     mailer = { send: jest.fn().mockResolvedValue(undefined) };
-    useCase = new SendNotificationUseCase(prisma, mailer);
+    push = { sendToUser: jest.fn().mockResolvedValue(1) };
+    sms = { send: jest.fn().mockResolvedValue(true) };
+    useCase = new SendNotificationUseCase(
+      prisma,
+      mailer,
+      push as unknown as PushSender,
+      sms as unknown as SmsSender,
+    );
   });
 
-  const conUsuario = (marketingOptIn = false) =>
-    prisma.user.findUnique.mockResolvedValue({ email: 'ana@ejemplo.com', marketingOptIn });
+  const conUsuario = (marketingOptIn = false, phone: string | null = '+16045550123') =>
+    prisma.user.findUnique.mockResolvedValue({ email: 'ana@ejemplo.com', phone, marketingOptIn });
 
   it('manda por las dos vias: correo y bandeja', async () => {
     conUsuario();
@@ -98,5 +109,55 @@ describe('SendNotificationUseCase', () => {
     expect(prisma.notification.create).toHaveBeenCalledWith(
       expect.objectContaining({ data: expect.objectContaining({ orderId: 'ord-9' }) }),
     );
+  });
+
+  describe('push y SMS', () => {
+    it('no salen si no se piden', async () => {
+      // Cuestan permiso del navegador y dinero respectivamente. Que fueran
+      // por omisión sería una factura y un cliente molesto.
+      conUsuario();
+      await useCase.execute({ userId: 'u1', type: 'ORDER', message: MENSAJE });
+      expect(push.sendToUser).not.toHaveBeenCalled();
+      expect(sms.send).not.toHaveBeenCalled();
+    });
+
+    it('salen cuando se piden, con el enlace al pedido', async () => {
+      conUsuario();
+      await useCase.execute({
+        userId: 'u1',
+        type: 'ORDER',
+        message: MENSAJE,
+        url: '/order/abc',
+        channels: { push: true, sms: true },
+      });
+      expect(push.sendToUser).toHaveBeenCalledWith(
+        'u1',
+        expect.objectContaining({ title: MENSAJE.title, url: '/order/abc' }),
+      );
+      expect(sms.send).toHaveBeenCalledWith('+16045550123', expect.stringContaining(MENSAJE.title));
+    });
+
+    it('sin telefono no intenta el SMS', async () => {
+      conUsuario(false, null);
+      await useCase.execute({
+        userId: 'u1',
+        type: 'ORDER',
+        message: MENSAJE,
+        channels: { sms: true },
+      });
+      expect(sms.send).not.toHaveBeenCalled();
+    });
+
+    it('la publicidad sigue respetando el consentimiento en todos los canales', async () => {
+      conUsuario(false);
+      await useCase.execute({
+        userId: 'u1',
+        type: 'MARKETING',
+        message: MENSAJE,
+        channels: { push: true, sms: true },
+      });
+      expect(push.sendToUser).not.toHaveBeenCalled();
+      expect(sms.send).not.toHaveBeenCalled();
+    });
   });
 });

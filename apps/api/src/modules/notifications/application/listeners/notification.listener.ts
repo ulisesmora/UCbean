@@ -4,6 +4,8 @@ import {
   EVENTS,
   type OrderPlacedEvent,
   type OrderStatusChangedEvent,
+  type PaymentFailedEvent,
+  type PaymentRefundedEvent,
   type TableReservationPlacedEvent,
 } from '../../../../common/events/domain-events';
 import * as t from '../../domain/templates';
@@ -33,12 +35,30 @@ export class NotificationListener {
 
   @OnEvent(EVENTS.orderStatusChanged)
   async onStatusChanged(e: OrderStatusChangedEvent) {
+    if (e.status === 'PREPARING') {
+      // Solo push: es el aviso de «sal ya», y llega mientras la persona
+      // camina. Un correo por cada café sería spam propio.
+      await this.notify.execute({
+        userId: e.userId,
+        type: 'ORDER',
+        orderId: e.orderId,
+        message: t.orderPreparing(),
+        url: `/order/${e.orderId}`,
+        channels: { email: false, inApp: true, push: true },
+      });
+      return;
+    }
+
     if (e.status === 'READY') {
+      // El único con las tres vías. Un café en la barra se enfría, y este
+      // es el momento en que avisar de más cuesta menos que avisar de menos.
       await this.notify.execute({
         userId: e.userId,
         type: 'ORDER',
         orderId: e.orderId,
         message: t.orderReady(),
+        url: `/order/${e.orderId}`,
+        channels: { push: true },
       });
       return;
     }
@@ -50,6 +70,34 @@ export class NotificationListener {
         message: t.orderCancelled(),
       });
     }
+  }
+
+  @OnEvent(EVENTS.paymentFailed)
+  async onPaymentFailed(e: PaymentFailedEvent) {
+    // Solo en la cuenta. Quien paga está en la pantalla y ya ve el error; un
+    // correo o un push por cada tarjeta rechazada sería ruido. El aviso queda
+    // para quien cerró la pestaña sin enterarse.
+    await this.notify.execute({
+      userId: e.userId,
+      type: 'ORDER',
+      orderId: e.orderId,
+      message: t.paymentFailed(e.reason),
+      url: `/order/${e.orderId}`,
+      channels: { email: false, inApp: true },
+    });
+  }
+
+  @OnEvent(EVENTS.paymentRefunded)
+  async onPaymentRefunded(e: PaymentRefundedEvent) {
+    // Un reembolso sí va por correo: es dinero que vuelve y la persona
+    // querrá tenerlo por escrito.
+    await this.notify.execute({
+      userId: e.userId,
+      type: 'ORDER',
+      orderId: e.orderId,
+      message: t.paymentRefunded(e.amount, e.full),
+      url: `/order/${e.orderId}`,
+    });
   }
 
   @OnEvent(EVENTS.tableReservationPlaced)

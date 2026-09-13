@@ -17,7 +17,7 @@ export class CreateRecipeDto {
   @ApiProperty({ example: 'hojicha-latte', description: 'Viaja en OrderItem.recipeId' })
   @IsString()
   @Matches(/^[a-z0-9]+(-[a-z0-9]+)*$/, {
-    message: 'El slug va en minusculas y con guiones, como hojicha-latte',
+    message: 'The slug is lowercase with hyphens, like hojicha-latte',
   })
   @MaxLength(64)
   slug: string;

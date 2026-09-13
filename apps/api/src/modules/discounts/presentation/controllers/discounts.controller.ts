@@ -20,13 +20,13 @@ export class DiscountsController {
   ) {}
 
   @Get('mine')
-  @ApiOperation({ summary: 'Los cupones que puedo usar ahora mismo' })
+  @ApiOperation({ summary: 'Codes I can use right now' })
   mine(@CurrentUser() user: JwtPayloadVo) {
     return this.discounts.availableFor(user.sub);
   }
 
   @Post('preview')
-  @ApiOperation({ summary: 'Cuánto descontaría este código, sin gastarlo' })
+  @ApiOperation({ summary: 'How much this code would take off, without using it' })
   preview(@CurrentUser() user: JwtPayloadVo, @Body() dto: PreviewDiscountDto) {
     return this.discounts.preview(dto.code, user.sub, dto.orderTotal);
   }
@@ -34,7 +34,7 @@ export class DiscountsController {
   @Post()
   @UseGuards(RolesGuard)
   @Roles('OWNER')
-  @ApiOperation({ summary: 'Crear un código para todo el mundo (solo OWNER)' })
+  @ApiOperation({ summary: 'Create a code for everyone (OWNER only)' })
   create(@Body() dto: CreateDiscountDto) {
     return this.prisma.discount.create({
       data: {

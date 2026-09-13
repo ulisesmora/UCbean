@@ -3,6 +3,7 @@
 import dynamic from 'next/dynamic';
 import { Component, useEffect, useMemo, useRef, useState } from 'react';
 import type { ReactNode } from 'react';
+import { Heart } from 'lucide-react';
 import {
   ARTS,
   BASES,
@@ -26,6 +27,8 @@ import { useWebglStage } from '@/hooks/use-webgl-stage';
 import { useQuery } from '@tanstack/react-query';
 import { productsApi } from '@/lib/api';
 import { useCartStore } from '@/stores/cart.store';
+import { useAuthStore } from '@/stores/auth.store';
+import { useSaveFavorite } from '@/hooks/use-favorites';
 import { baseOf } from '@/lib/builder';
 import { toast } from 'sonner';
 
@@ -137,14 +140,25 @@ function Choice({
   );
 }
 
-export function CoffeeBuilder() {
-  const [build, setBuild] = useState<Build>(DEFAULT_BUILD);
+export function CoffeeBuilder({
+  initialBuild,
+  eyebrow = 'Build your own',
+  heading,
+}: {
+  /** De donde se parte. Una bebida de la carta que se quiere retocar, o nada. */
+  initialBuild?: Build;
+  eyebrow?: string;
+  heading?: React.ReactNode;
+} = {}) {
+  const [build, setBuild] = useState<Build>(initialBuild ?? DEFAULT_BUILD);
   const [step, setStep] = useState(0);
   const [animate, setAnimate] = useState(true);
   // Only one WebGL context should be alive at a time on this page.
   const { ref: stage, mounted: visible, generation } = useWebglStage<HTMLDivElement>();
   const liveRef = useRef<HTMLParagraphElement>(null);
   const addItem = useCartStore((s) => s.addItem);
+  const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
+  const save = useSaveFavorite();
 
   const { data: products } = useQuery({
     queryKey: ['products'],
@@ -161,6 +175,13 @@ export function CoffeeBuilder() {
     addItem(anchor, { build, label: `${baseOf(build).name}, your way` });
     toast.success(`Added · ${describe(build)}`);
   }
+
+  // La formula de partida llega del API, o sea despues del primer render.
+  // Sin esto el configurador se quedaria en el latte por defecto aunque
+  // hubieras entrado desde una bebida concreta.
+  useEffect(() => {
+    if (initialBuild) setBuild(initialBuild);
+  }, [initialBuild]);
 
   const scene = useMemo(() => sceneOf(build), [build]);
   const total = priceOf(build);
@@ -191,13 +212,17 @@ export function CoffeeBuilder() {
       <div className="mx-auto max-w-6xl px-6 py-20 md:py-28">
         <p className="mb-5 inline-flex items-center gap-3 font-mono text-[11px] uppercase tracking-[0.24em] text-stone2-600">
           <span className="h-2.5 w-2.5 bg-neon-500 ring-1 ring-stone2-900" />
-          Build your own
+          {eyebrow}
         </p>
         <h2
           id="builder-heading"
           className="mb-12 text-4xl font-extrabold leading-[1.0] text-stone2-900 md:text-5xl"
         >
-          Make it <span className="marker font-seal italic">yours.</span>
+          {heading ?? (
+            <>
+              Make it <span className="marker font-seal italic">yours.</span>
+            </>
+          )}
         </h2>
 
         <div className="grid gap-10 md:grid-cols-12 md:gap-8">
@@ -422,14 +447,48 @@ export function CoffeeBuilder() {
                   Next
                 </button>
               ) : (
-                <button
-                  type="button"
-                  onClick={addToOrder}
-                  disabled={!anchor}
-                  className="btn btn-acid px-7 py-3 text-[14px] disabled:cursor-not-allowed disabled:opacity-50"
-                >
-                  Add to order · ${total.toFixed(2)}
-                </button>
+                <>
+                  {/* Guardar aquí y no en el perfil: acabas de diseñar algo
+                      que te gustó y te acuerdas de por qué. Tres días después
+                      ya no. */}
+                  {isAuthenticated &&
+                    (save.isSuccess ? (
+                      <span className="flex items-center gap-1.5 px-2 text-[13.5px] font-semibold text-forest-700">
+                        <Heart size={14} fill="currentColor" />
+                        Saved
+                      </span>
+                    ) : (
+                      <button
+                        type="button"
+                        disabled={save.isPending}
+                        onClick={() =>
+                          save.mutate(
+                            {
+                              name: `${baseOf(build).name}, my way`,
+                              build,
+                              productId: anchor?.id,
+                            },
+                            {
+                              onSuccess: () => toast.success('Saved to your usuals'),
+                              onError: (e) => toast.error(e.message),
+                            },
+                          )
+                        }
+                        className="btn px-5 py-3 text-[14px] disabled:opacity-50"
+                      >
+                        <Heart size={14} />
+                        Save this
+                      </button>
+                    ))}
+                  <button
+                    type="button"
+                    onClick={addToOrder}
+                    disabled={!anchor}
+                    className="btn btn-acid px-7 py-3 text-[14px] disabled:cursor-not-allowed disabled:opacity-50"
+                  >
+                    Add to order · ${total.toFixed(2)}
+                  </button>
+                </>
               )}
             </div>
           </div>

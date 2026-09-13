@@ -21,7 +21,7 @@ export class LoyaltyController {
   ) {}
 
   @Get('rewards')
-  @ApiOperation({ summary: 'Qué se puede canjear, y por cuántos puntos' })
+  @ApiOperation({ summary: 'What can be redeemed, and for how many points' })
   rewards() {
     return this.prisma.reward.findMany({
       where: { isActive: true },
@@ -32,7 +32,7 @@ export class LoyaltyController {
   @Get('me')
   @UseGuards(JwtAuthGuard)
   @ApiBearerAuth()
-  @ApiOperation({ summary: 'Mi saldo, mis sellos y mis últimos movimientos' })
+  @ApiOperation({ summary: 'My balance, stamps and recent activity' })
   async me(@CurrentUser() user: JwtPayloadVo) {
     const card = await this.loyalty.cardFor(user.sub);
     const [points, movements, redemptions] = await Promise.all([
@@ -49,7 +49,7 @@ export class LoyaltyController {
   @Post('redeem/:rewardId')
   @UseGuards(JwtAuthGuard)
   @ApiBearerAuth()
-  @ApiOperation({ summary: 'Cambiar puntos por un premio' })
+  @ApiOperation({ summary: 'Redeem points for a reward' })
   async redeem(@CurrentUser() user: JwtPayloadVo, @Param('rewardId') rewardId: string) {
     const { redemption, reward, balance } = await this.loyalty.redeem(user.sub, rewardId);
     await this.notify.execute({
@@ -64,7 +64,7 @@ export class LoyaltyController {
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles('OWNER')
   @ApiBearerAuth()
-  @ApiOperation({ summary: 'Dar de alta un premio (solo OWNER)' })
+  @ApiOperation({ summary: 'Create a reward (OWNER only)' })
   createReward(@Body() dto: CreateRewardDto) {
     return this.prisma.reward.create({ data: dto });
   }
@@ -73,7 +73,7 @@ export class LoyaltyController {
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles('OWNER', 'STAFF')
   @ApiBearerAuth()
-  @ApiOperation({ summary: 'Ajustar puntos a mano, con motivo (OWNER / STAFF)' })
+  @ApiOperation({ summary: 'Adjust points by hand, with a reason (OWNER / STAFF)' })
   async grant(@Body() dto: GrantPointsDto) {
     const balance = await this.loyalty.addPoints(dto.userId, dto.delta, 'MANUAL', {
       note: dto.note,

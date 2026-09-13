@@ -26,7 +26,7 @@ export class CampaignsController {
   ) {}
 
   @Get()
-  @ApiOperation({ summary: 'Todas las campañas, con cuántas entregas llevan' })
+  @ApiOperation({ summary: 'All campaigns, with delivery counts' })
   list() {
     return this.prisma.campaign.findMany({
       orderBy: { createdAt: 'desc' },
@@ -43,7 +43,7 @@ export class CampaignsController {
   }
 
   @Post()
-  @ApiOperation({ summary: 'Crear una campaña, en borrador o programada' })
+  @ApiOperation({ summary: 'Create a campaign, as a draft or scheduled' })
   create(@Body() dto: CreateCampaignDto) {
     return this.prisma.campaign.create({
       data: {
@@ -55,7 +55,7 @@ export class CampaignsController {
   }
 
   @Post(':id/send')
-  @ApiOperation({ summary: 'Mandarla ahora. Una campaña ya enviada no se repite.' })
+  @ApiOperation({ summary: 'Send it now. A sent campaign is never repeated.' })
   send(@Param('id') id: string) {
     return this.campaigns.send(id);
   }

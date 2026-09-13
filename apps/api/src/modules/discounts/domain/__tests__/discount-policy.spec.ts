@@ -75,8 +75,8 @@ describe('checkDiscount', () => {
   });
 
   it('cada motivo tiene un texto que explica que paso', () => {
-    expect(reasonText('ALREADY_USED')).toContain('Ya usaste');
-    expect(reasonText('NOT_YOURS')).toContain('otra cuenta');
+    expect(reasonText('ALREADY_USED')).toContain('You already used');
+    expect(reasonText('NOT_YOURS')).toContain('another account');
   });
 });
 

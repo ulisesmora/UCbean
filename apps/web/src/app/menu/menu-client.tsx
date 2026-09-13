@@ -5,6 +5,7 @@ import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Skeleton } from '@/components/ui/skeleton';
 import { ProductCard } from '@/components/features/menu/product-card';
 import { useProducts, useCategories } from '@/hooks/use-products';
+import { BUILD_OWN, BuildYourOwnCard } from '@/components/features/menu/build-your-own-card';
 
 export function MenuClient() {
   const { data: categories = [], isLoading: loadingCats } = useCategories();
@@ -14,6 +15,9 @@ export function MenuClient() {
   );
 
   const loading = loadingCats || loadingProds;
+  // Recommended wherever drinks are: on All and on any drinks section.
+  const activeName = categories.find((c) => c.id === activeCat)?.name ?? '';
+  const showBuild = activeCat === 'all' || /made|coffee|drink|seasonal|tea/i.test(activeName);
 
   return (
     <>
@@ -61,8 +65,10 @@ export function MenuClient() {
         </p>
       ) : (
         <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
+          {showBuild && <BuildYourOwnCard />}
           {products
-            .filter((p) => p.isAvailable)
+            // The card above is how Build your own is ordered.
+            .filter((p) => p.isAvailable && !BUILD_OWN.test(p.name))
             .map((product) => (
               <ProductCard key={product.id} product={product} />
             ))}

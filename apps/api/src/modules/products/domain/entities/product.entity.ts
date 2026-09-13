@@ -9,5 +9,7 @@ export class Product {
     public readonly imageUrl: string | null,
     public readonly createdAt: Date,
     public readonly updatedAt: Date,
+    /** A qué parte de la carta pertenece. Nulo cuando no se pidió cargarla. */
+    public readonly category: { id: string; name: string } | null = null,
   ) {}
 }

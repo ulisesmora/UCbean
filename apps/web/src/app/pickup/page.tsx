@@ -2,26 +2,27 @@
 
 import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { Clock, CheckCircle2 } from 'lucide-react';
-import { Button } from '@/components/ui/button';
+import { Clock, Zap } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
 import { reservationsApi } from '@/lib/api';
 import { useAuthStore } from '@/stores/auth.store';
 import { AuthModal } from '@/components/features/auth/auth-modal';
-import { toast } from 'sonner';
-import { useCartStore } from '@/stores/cart.store';
-import { useCheckout } from '@/hooks/use-cart';
+import { CheckoutPanel } from '@/components/features/checkout/checkout-panel';
+
+/** Cuándo se recoge: en cuanto esté, o a una hora elegida. */
+type When = 'asap' | 'slot';
 
 export default function PickupPage() {
   const today = new Date().toISOString().split('T')[0];
   const [date, setDate] = useState(today);
   const [selectedSlot, setSelectedSlot] = useState<string | null>(null);
+  const [when, setWhen] = useState<When>('asap');
   const [showAuth, setShowAuth] = useState(false);
-  const [done, setDone] = useState(false);
-  const [code, setCode] = useState<string | null>(null);
   const { isAuthenticated } = useAuthStore();
-  const { items, totalPrice } = useCartStore();
-  const checkout = useCheckout();
+
+  // «Ahora mismo» solo existe hoy: para mañana siempre hay que elegir hora.
+  const esHoy = date === today;
+  const modo: When = esHoy ? when : 'slot';
 
   const { data: slotData, isLoading } = useQuery({
     queryKey: ['pickup-slots', date],
@@ -29,82 +30,21 @@ export default function PickupPage() {
     enabled: !!date,
   });
 
-  function handleOrder() {
-    if (!isAuthenticated) {
-      setShowAuth(true);
-      return;
-    }
-    if (!selectedSlot) {
-      toast.error('Please select a pickup time');
-      return;
-    }
-    if (items.length === 0) {
-      toast.error('Add items to your cart first');
-      return;
-    }
-
-    checkout.mutate(
-      { type: 'PICKUP', date, slot: selectedSlot },
-      {
-        onSuccess: (order) => {
-          setCode(order.pickup?.confirmationCode ?? null);
-          setDone(true);
-          toast.success('Order placed. See you at ' + selectedSlot);
-        },
-        onError: (e) => toast.error(e.message),
-      },
-    );
-  }
-
-  if (done) {
-    return (
-      <div className="max-w-lg mx-auto px-5 py-20 text-center">
-        <CheckCircle2 size={48} className="text-forest-700 mx-auto mb-4" strokeWidth={1.5} />
-        <h1 className="font-body font-bold text-2xl text-stone2-900 mb-2">Order confirmed!</h1>
-        <p className="text-stone2-600 text-sm mb-6">
-          Ready for pickup at <strong>{selectedSlot}</strong> on {date}.
-        </p>
-        {code && (
-          <div className="rule mx-auto mb-6 inline-block bg-birch-50 px-6 py-4">
-            <p className="font-mono text-[11px] uppercase tracking-[0.2em] text-stone2-600">
-              Show this at the counter
-            </p>
-            <p className="mt-1 font-mono text-3xl font-bold tracking-[0.2em] text-stone2-900">
-              {code}
-            </p>
-          </div>
-        )}
-        <Button
-          onClick={() => {
-            setDone(false);
-            setSelectedSlot(null);
-            setCode(null);
-          }}
-          variant="outline"
-          className="border-stone2-900 text-forest-700"
-        >
-          Place another order
-        </Button>
-      </div>
-    );
-  }
-
   return (
     <>
-      <div className="max-w-2xl mx-auto px-5 py-12 md:py-16">
-        <p className="text-forest-600 text-xs font-bold tracking-[0.2em] uppercase mb-2">
+      <div className="mx-auto max-w-2xl px-5 py-12 md:py-16">
+        <p className="mb-2 text-xs font-bold uppercase tracking-[0.2em] text-forest-600">
           Skip the line
         </p>
-        <h1 className="font-body font-extrabold text-4xl md:text-5xl text-stone2-900 mb-2">
+        <h1 className="mb-2 font-body text-4xl font-extrabold text-stone2-900 md:text-5xl">
           Order &amp; Pickup
         </h1>
-        <p className="text-stone2-600 text-[15px] mb-10 max-w-md">
+        <p className="mb-10 max-w-md text-[15px] text-stone2-600">
           Order ahead, pick up in 10–15 minutes. No waiting.
         </p>
 
-        {/* Date picker */}
         <section className="mb-8">
-          <h2 className="font-semibold text-stone2-900 text-sm mb-3">Pickup date</h2>
+          <h2 className="mb-3 text-sm font-semibold text-stone2-900">Pickup date</h2>
           <input
             type="date"
             value={date}
@@ -112,35 +52,71 @@ export default function PickupPage() {
             onChange={(e) => {
               setDate(e.target.value);
               setSelectedSlot(null);
+              setWhen(e.target.value === today ? 'asap' : 'slot');
             }}
-            className="px-4 py-2.5  border border-birch-200 bg-birch-100 text-stone2-900 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-stone2-900"
+            className="rounded border-2 border-stone2-900 bg-white/70 px-4 py-2.5 text-sm font-medium text-stone2-900 outline-none focus:bg-white"
           />
         </section>
 
-        {/* Time slots */}
         <section className="mb-10">
-          <h2 className="font-semibold text-stone2-900 text-sm mb-3">Pickup time</h2>
+          <h2 className="mb-3 text-sm font-semibold text-stone2-900">Pickup time</h2>
+
+          {/* La opción por defecto hoy: la mayoría pide de camino, no para
+              dentro de tres horas. Elegir hora sigue ahí, un toque abajo. */}
+          {esHoy && (
+            <button
+              type="button"
+              onClick={() => {
+                setWhen('asap');
+                setSelectedSlot(null);
+              }}
+              aria-pressed={modo === 'asap'}
+              className={`glass glass-edge tap-target mb-4 flex w-full items-center gap-3 p-4 text-left transition-colors ${
+                modo === 'asap' ? 'bg-neon-500/70' : 'glass-hover'
+              }`}
+            >
+              <Zap size={20} className="shrink-0 text-forest-700" strokeWidth={1.8} />
+              <span className="flex min-w-0 flex-col">
+                <span className="text-[15px] font-bold text-stone2-900">
+                  As soon as it&apos;s ready
+                </span>
+                <span className="text-[12.5px] text-stone2-600">
+                  Usually 10–15 minutes. We&apos;ll confirm the exact time.
+                </span>
+              </span>
+            </button>
+          )}
+
+          {esHoy && (
+            <p className="mb-3 text-[12px] uppercase tracking-[0.14em] text-stone2-400">
+              or pick a time
+            </p>
+          )}
+
           {isLoading ? (
             <div className="grid grid-cols-4 gap-2">
               {Array.from({ length: 8 }).map((_, i) => (
-                <Skeleton key={i} className="h-10 " />
+                <Skeleton key={i} className="h-10" />
               ))}
             </div>
           ) : !slotData?.slots?.length ? (
-            <p className="text-stone2-400 text-sm">No slots available for this date.</p>
+            <p className="text-sm text-stone2-400">No slots available for this date.</p>
           ) : (
-            <div className="grid grid-cols-3 sm:grid-cols-4 gap-2">
+            <div className="grid grid-cols-3 gap-2 sm:grid-cols-4">
               {slotData.slots.map((time) => {
-                const active = selectedSlot === time;
+                const active = modo === 'slot' && selectedSlot === time;
                 return (
                   <button
                     key={time}
-                    onClick={() => setSelectedSlot(time)}
+                    onClick={() => {
+                      setSelectedSlot(time);
+                      setWhen('slot');
+                    }}
                     aria-pressed={active}
-                    className={`tap-target flex flex-col items-center border-2 px-2 py-2.5 font-mono text-xs font-bold tabular-nums transition-all ${
+                    className={`tap-target flex flex-col items-center rounded border-2 border-stone2-900 px-2 py-2.5 font-mono text-xs font-bold tabular-nums transition-all ${
                       active
-                        ? 'border-stone2-900 bg-neon-500 text-stone2-900'
-                        : 'border-stone2-900 bg-birch-50 text-stone2-900 hover:bg-birch-100'
+                        ? 'bg-neon-500 text-stone2-900'
+                        : 'bg-white/60 text-stone2-900 hover:bg-white'
                     }`}
                   >
                     <Clock size={13} className="mb-1" />
@@ -152,33 +128,24 @@ export default function PickupPage() {
           )}
         </section>
 
-        {/* Cart summary + CTA */}
-        <div className="p-5 glass glass-edge">
-          <div className="flex items-center justify-between mb-4">
-            <span className="font-semibold text-stone2-900 text-sm">
-              {items.length === 0
-                ? 'No items yet'
-                : `${items.reduce((s, i) => s + i.qty, 0)} items`}
-            </span>
-            {items.length > 0 && (
-              <span className="font-bold text-stone2-900">${totalPrice().toFixed(2)}</span>
-            )}
+        {isAuthenticated ? (
+          <CheckoutPanel
+            date={date}
+            slot={modo === 'slot' ? selectedSlot : null}
+            asap={modo === 'asap'}
+          />
+        ) : (
+          <div className="glass glass-edge flex flex-col items-center gap-3 p-6 text-center">
+            <p className="text-[15px] text-stone2-900">Sign in to place your order.</p>
+            <button
+              type="button"
+              onClick={() => setShowAuth(true)}
+              className="btn btn-acid px-6 py-2.5 text-[15px]"
+            >
+              Sign in
+            </button>
           </div>
-          {items.length === 0 ? (
-            <p className="text-xs text-stone2-400 mb-4">Add items from the menu first.</p>
-          ) : null}
-          <Button
-            onClick={handleOrder}
-            disabled={checkout.isPending || items.length === 0 || !selectedSlot}
-            className="w-full bg-neon-500 hover:bg-neon-600 text-stone2-900 font-semibold  h-12"
-          >
-            {checkout.isPending
-              ? 'Placing order...'
-              : !selectedSlot
-                ? 'Select a pickup time'
-                : 'Place pickup order'}
-          </Button>
-        </div>
+        )}
       </div>
 
       <AuthModal open={showAuth} onOpenChange={setShowAuth} />

@@ -1,0 +1,304 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    color-scheme: light;
+    --ink: #111110;
+    --olive: 169 194 63;
+    --ember: 232 93 42;
+    --paper: #f7f7f4;
+
+    /* El vidrio, en un sitio. Cambiar la opacidad aquí cambia todas las
+       superficies a la vez en vez de en veinte clases sueltas. */
+    --glass-bg: rgba(255, 255, 255, 0.62);
+    --glass-bg-strong: rgba(255, 255, 255, 0.82);
+    --glass-border: rgba(17, 17, 16, 0.1);
+    --glass-highlight: rgba(255, 255, 255, 0.85);
+  }
+
+  html {
+    -webkit-tap-highlight-color: transparent;
+    background-color: #ffffff;
+  }
+
+  body {
+    margin: 0;
+    font-family: 'Plus Jakarta Sans', system-ui, sans-serif;
+    color: var(--ink);
+    -webkit-font-smoothing: antialiased;
+    /* El fondo tiene color para que el vidrio tenga algo que difuminar.
+       Sobre blanco plano, un blur no se distingue de una opacidad. */
+    background:
+      radial-gradient(60rem 40rem at 82% -8%, rgba(169, 194, 63, 0.16), transparent 60%),
+      radial-gradient(48rem 34rem at -6% 106%, rgba(232, 93, 42, 0.08), transparent 62%),
+      #fbfbf9;
+    background-attachment: fixed;
+  }
+
+  h1,
+  h2,
+  h3 {
+    letter-spacing: -0.028em;
+    margin: 0;
+  }
+
+  :focus-visible {
+    outline: 2px solid var(--ink);
+    outline-offset: 3px;
+    border-radius: 10px;
+  }
+
+  ::selection {
+    background: rgb(var(--olive));
+    color: var(--ink);
+  }
+}
+
+@layer utilities {
+  /* Cuarenta y cuatro píxeles es el mínimo para un dedo. El personal usa
+     esto en una tablet detrás de la barra, con prisa. */
+  .tap-target {
+    min-height: 44px;
+    min-width: 44px;
+  }
+
+  .tabular {
+    font-variant-numeric: tabular-nums;
+  }
+
+  /* ── Vidrio ───────────────────────────────────────────────
+     Tres piezas hacen que parezca vidrio y no una caja translúcida:
+     el desenfoque de lo que hay detrás, una línea de luz en el borde
+     superior, y una sombra lejana muy suave. Sin la línea de luz
+     parece plástico. */
+  .glass {
+    background: var(--glass-bg);
+    backdrop-filter: blur(18px) saturate(160%);
+    -webkit-backdrop-filter: blur(18px) saturate(160%);
+    border: 1px solid var(--glass-border);
+    box-shadow:
+      inset 0 1px 0 var(--glass-highlight),
+      0 1px 2px rgba(17, 17, 16, 0.04),
+      0 10px 30px -12px rgba(17, 17, 16, 0.16);
+  }
+
+  .glass-strong {
+    background: var(--glass-bg-strong);
+    backdrop-filter: blur(24px) saturate(180%);
+    -webkit-backdrop-filter: blur(24px) saturate(180%);
+    border: 1px solid var(--glass-border);
+    box-shadow:
+      inset 0 1px 0 var(--glass-highlight),
+      0 2px 6px rgba(17, 17, 16, 0.05),
+      0 18px 44px -16px rgba(17, 17, 16, 0.2);
+  }
+
+  /* La tarjeta. Se levanta un pelo al pasar por encima, nada más. */
+  .card {
+    border-radius: 16px;
+    background: var(--glass-bg);
+    backdrop-filter: blur(18px) saturate(160%);
+    -webkit-backdrop-filter: blur(18px) saturate(160%);
+    border: 1px solid var(--glass-border);
+    box-shadow:
+      inset 0 1px 0 var(--glass-highlight),
+      0 1px 2px rgba(17, 17, 16, 0.04),
+      0 10px 30px -14px rgba(17, 17, 16, 0.14);
+    transition:
+      transform 260ms cubic-bezier(0.32, 0.72, 0, 1),
+      box-shadow 260ms cubic-bezier(0.32, 0.72, 0, 1);
+  }
+  .card-hover:hover {
+    transform: translateY(-2px);
+    box-shadow:
+      inset 0 1px 0 var(--glass-highlight),
+      0 2px 6px rgba(17, 17, 16, 0.05),
+      0 22px 44px -18px rgba(17, 17, 16, 0.22);
+  }
+
+  /* ── Botones ──────────────────────────────────────────────
+     El mismo vidrio, en pieza pequeña. Al pulsar se hunde en vez de
+     saltar: el desplazamiento brusco del brutalismo se lleva mal con
+     una tablet, donde el dedo tapa justo lo que se mueve. */
+  .btn {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    padding: 0.55rem 1rem;
+    border-radius: 12px;
+    border: 1px solid var(--glass-border);
+    background: var(--glass-bg-strong);
+    backdrop-filter: blur(16px) saturate(170%);
+    -webkit-backdrop-filter: blur(16px) saturate(170%);
+    color: var(--ink);
+    font-weight: 600;
+    font-size: 0.875rem;
+    letter-spacing: -0.01em;
+    cursor: pointer;
+    overflow: hidden;
+    box-shadow:
+      inset 0 1px 0 var(--glass-highlight),
+      0 1px 2px rgba(17, 17, 16, 0.06),
+      0 6px 16px -8px rgba(17, 17, 16, 0.22);
+    transition:
+      transform 200ms cubic-bezier(0.32, 0.72, 0, 1),
+      box-shadow 200ms cubic-bezier(0.32, 0.72, 0, 1),
+      background-color 200ms ease;
+  }
+
+  /* El reflejo que cruza al pasar por encima. Es lo que separa «vidrio»
+     de «fondo translúcido», y por eso vive en el botón y no en todo. */
+  .btn::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(
+      100deg,
+      transparent 20%,
+      rgba(255, 255, 255, 0.55) 50%,
+      transparent 80%
+    );
+    transform: translateX(-120%);
+    transition: transform 620ms cubic-bezier(0.32, 0.72, 0, 1);
+    pointer-events: none;
+  }
+  .btn:hover:not(:disabled)::after {
+    transform: translateX(220%);
+  }
+
+  .btn:hover:not(:disabled) {
+    transform: translateY(-1px);
+    box-shadow:
+      inset 0 1px 0 var(--glass-highlight),
+      0 2px 4px rgba(17, 17, 16, 0.06),
+      0 10px 22px -8px rgba(17, 17, 16, 0.26);
+  }
+  .btn:active:not(:disabled) {
+    transform: translateY(0.5px) scale(0.985);
+    box-shadow:
+      inset 0 1px 2px rgba(17, 17, 16, 0.12),
+      0 1px 2px rgba(17, 17, 16, 0.06);
+    transition-duration: 90ms;
+  }
+  .btn:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+  }
+
+  /* Oliva de relleno, siempre con tinta encima. */
+  .btn-olive {
+    background: linear-gradient(180deg, rgba(190, 212, 90, 0.95), rgba(169, 194, 63, 0.95));
+    border-color: rgba(85, 104, 26, 0.35);
+  }
+  .btn-olive:hover:not(:disabled) {
+    background: linear-gradient(180deg, rgba(200, 220, 114, 0.97), rgba(180, 204, 76, 0.97));
+  }
+
+  .btn-ink {
+    background: linear-gradient(180deg, rgba(42, 42, 39, 0.94), rgba(17, 17, 16, 0.96));
+    border-color: rgba(255, 255, 255, 0.14);
+    color: #f7f7f4;
+    box-shadow:
+      inset 0 1px 0 rgba(255, 255, 255, 0.16),
+      0 6px 16px -8px rgba(17, 17, 16, 0.4);
+  }
+
+  .btn-ember {
+    background: linear-gradient(180deg, rgba(255, 138, 92, 0.94), rgba(232, 93, 42, 0.94));
+    border-color: rgba(156, 58, 13, 0.32);
+    color: #ffffff;
+  }
+
+  /* Botón sin peso, para acciones secundarias. Apple usa mucho esto:
+     texto y nada más hasta que lo tocas. */
+  .btn-quiet {
+    background: transparent;
+    border-color: transparent;
+    box-shadow: none;
+  }
+  .btn-quiet:hover:not(:disabled) {
+    background: rgba(17, 17, 16, 0.05);
+    box-shadow: none;
+    transform: none;
+  }
+
+  /* ── Campos ───────────────────────────────────────────────── */
+  .field {
+    width: 100%;
+    border-radius: 12px;
+    border: 1px solid var(--glass-border);
+    background: rgba(255, 255, 255, 0.7);
+    padding: 0.6rem 0.85rem;
+    font-size: 0.9375rem;
+    color: var(--ink);
+    outline: none;
+    transition:
+      border-color 180ms ease,
+      box-shadow 180ms ease,
+      background-color 180ms ease;
+  }
+  .field:focus {
+    background: #ffffff;
+    border-color: rgba(85, 104, 26, 0.5);
+    box-shadow: 0 0 0 4px rgba(169, 194, 63, 0.22);
+  }
+  .field::placeholder {
+    color: #a3a39b;
+  }
+
+  /* Con icono dentro. Va después de `.field` a propósito: las dos están
+     en la misma capa, así que manda la que se declara al final. */
+  .field-search {
+    padding-inline-start: 2.3rem;
+  }
+
+  /* ── Etiquetas ────────────────────────────────────────────── */
+  .pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.25rem;
+    border-radius: 9999px;
+    border: 1px solid var(--glass-border);
+    background: rgba(255, 255, 255, 0.72);
+    padding: 0.1rem 0.55rem;
+    font-size: 0.6875rem;
+    font-weight: 600;
+    letter-spacing: 0.02em;
+    white-space: nowrap;
+  }
+  .pill-olive {
+    background: rgba(169, 194, 63, 0.9);
+    border-color: rgba(85, 104, 26, 0.3);
+  }
+  .pill-ember {
+    background: rgba(232, 93, 42, 0.92);
+    border-color: rgba(156, 58, 13, 0.3);
+    color: #ffffff;
+  }
+  .pill-ink {
+    background: rgba(17, 17, 16, 0.9);
+    border-color: rgba(255, 255, 255, 0.15);
+    color: #f7f7f4;
+  }
+}
+
+/* Un desenfoque de pantalla completa por cada tarjeta cuesta caro en una
+   tablet vieja. Cuando alguien pide menos movimiento, se cambia por
+   opacidad, que no cuesta nada. */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  .btn:hover,
+  .btn:active,
+  .card-hover:hover {
+    animation: none !important;
+    transition: none !important;
+    transform: none !important;
+  }
+  .btn::after {
+    display: none;
+  }
+}

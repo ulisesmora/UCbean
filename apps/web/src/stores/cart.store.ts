@@ -2,7 +2,7 @@
 
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
-import { describe, priceOf, type Build } from '@/lib/builder';
+import { describe, priceOf, EXTRAS, type Build } from '@/lib/builder';
 import type { Product } from '@/types/api.types';
 
 /**
@@ -22,6 +22,12 @@ export interface CartItem {
   qty: number;
   /** How this one is made. Absent for a bag of beans or a pastry. */
   build?: Build;
+  /** Añadidos sobre un producto de carta. Se cobran encima de su precio. */
+  extras?: string[];
+  /** Lo que el cliente pidió a mano: «extra caliente», «para llevar». */
+  note?: string;
+  /** For here or to go, on a menu item. A built drink carries it in its build. */
+  vessel?: 'here' | 'togo';
   /** The menu recipe it came from, absent when the customer built it. */
   recipeId?: string;
   /** What to show on the line, and on the ticket in the kitchen. */
@@ -39,8 +45,22 @@ export interface CartItem {
  * sorted for the same reason: sugar then cinnamon is the same drink as
  * cinnamon then sugar.
  */
-function lineIdFor(productId: string, build?: Build): string {
-  if (!build) return productId;
+function lineIdFor(
+  productId: string,
+  build?: Build,
+  extras?: string[],
+  note?: string,
+  vessel?: string,
+): string {
+  if (!build) {
+    // Sin fórmula, lo que distingue una línea de otra son los añadidos y la
+    // nota: dos flat whites, uno con canela, son dos bebidas distintas que
+    // preparar aunque salgan de la misma fila del catálogo.
+    const sufijo = [[...(extras ?? [])].sort().join('+'), note ?? '', vessel ?? '']
+      .filter(Boolean)
+      .join('|');
+    return sufijo ? `${productId}:${sufijo}` : productId;
+  }
   const parts = [
     build.beans,
     build.size,
@@ -63,7 +83,14 @@ interface CartState {
   /** Add a plain catalogue item, or the same product built a particular way. */
   addItem: (
     product: Product,
-    options?: { build?: Build; recipeId?: string; label?: string },
+    options?: {
+      build?: Build;
+      recipeId?: string;
+      label?: string;
+      extras?: string[];
+      note?: string;
+      vessel?: 'here' | 'togo';
+    },
   ) => void;
   removeItem: (lineId: string) => void;
   updateQty: (lineId: string, qty: number) => void;
@@ -85,24 +112,41 @@ export const useCartStore = create<CartState>()(
 
       addItem: (product, options) =>
         set((state) => {
-          const { build, recipeId, label } = options ?? {};
-          const lineId = lineIdFor(product.id, build);
+          const { build, recipeId, label, extras, note, vessel } = options ?? {};
+          const lineId = lineIdFor(product.id, build, extras, note, build ? undefined : vessel);
           const existing = state.items.find((i) => i.lineId === lineId);
           if (existing) {
             return {
               items: state.items.map((i) => (i.lineId === lineId ? { ...i, qty: i.qty + 1 } : i)),
             };
           }
+          // Lo que suman los extras, con los mismos precios que cobra el
+          // servidor. Si aquí saliera otro número, el carrito mentiría.
+          const anadido = (extras ?? []).reduce(
+            (sum, id) => sum + (EXTRAS.find((e) => e.id === id)?.price ?? 0),
+            0,
+          );
+
           const line: CartItem = {
             lineId,
             product,
             qty: 1,
             build,
+            extras: extras?.length ? extras : undefined,
+            note,
+            vessel: build ? undefined : vessel,
             recipeId,
             label: label ?? product.name,
-            ticket: build ? describe(build) : undefined,
-            // A built drink is priced by its formula; a bag of beans by the shelf.
-            price: build ? priceOf(build) : product.price,
+            // What the bar reads: the extras, then whether it stays or goes.
+            ticket: build
+              ? describe(build)
+              : [
+                  ...EXTRAS.filter((e) => extras?.includes(e.id)).map((e) => e.name.toLowerCase()),
+                  ...(vessel ? [vessel === 'here' ? 'for here' : 'to go'] : []),
+                ].join(', ') || undefined,
+            // A built drink is priced by its formula; a bag of beans by the
+            // shelf, más lo que se le haya añadido encima.
+            price: build ? priceOf(build) : Math.round((product.price + anadido) * 100) / 100,
           };
           return { items: [...state.items, line] };
         }),
@@ -130,9 +174,10 @@ export const useCartStore = create<CartState>()(
     }),
     {
       name: 'ucbean-cart',
-      // Bumped because lines gained an id and a price of their own. An old
-      // basket has neither, and rather than guess at them we start it empty.
-      version: 2,
+      // Sube cada vez que cambia la forma de una línea. Ahora llevan extras
+      // y nota, y su id se calcula distinto: un carrito viejo no los tiene y
+      // preferimos empezarlo vacío antes que adivinarlos.
+      version: 3,
       migrate: () => ({ items: [] }),
       partialize: (state) => ({ items: state.items }),
     },

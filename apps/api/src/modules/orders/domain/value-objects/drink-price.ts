@@ -63,6 +63,29 @@ export function priceOfBuild(build: DrinkBuild): number {
 }
 
 /** The ticket line, in the words the barista reads off the printer. */
+/**
+ * Lo que suman unos extras sobre un producto de carta.
+ *
+ * Un café de la carta ya tiene su precio en el menú; añadirle canela no
+ * puede hacer que se recalcule la bebida entera y salga otro número. Esto
+ * cobra solo lo añadido, que es lo que el cliente entiende que está
+ * pagando de más.
+ *
+ * Un extra desconocido suma cero en vez de reventar: la carta puede
+ * cambiar, y un pedido no se pierde por un ingrediente retirado.
+ */
+export function priceOfExtras(extras: string[] | undefined): number {
+  if (!extras?.length) return 0;
+  const total = extras.reduce((sum, e) => sum + priceOf(EXTRAS, e), 0);
+  return Math.round(total * 100) / 100;
+}
+
+/** Los extras como se leen en la barra: «con canela y nata». */
+export function describeExtras(extras: string[] | undefined): string {
+  if (!extras?.length) return '';
+  return extras.map((id) => (optionById(EXTRAS, id)?.name ?? id).toLowerCase()).join(', ');
+}
+
 export function describeBuild(build: DrinkBuild): string {
   const size = optionById(SIZES, build.size);
   const parts = [

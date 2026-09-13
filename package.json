@@ -16,6 +16,8 @@
     "db:seed": "pnpm --filter @ucbean/api db:seed",
     "dev:web": "pnpm --filter @ucbean/web dev",
     "build:web": "pnpm --filter @ucbean/web build",
+    "dev:crm": "pnpm --filter @ucbean/crm dev",
+    "build:crm": "pnpm --filter @ucbean/crm build",
     "test": "pnpm --filter @ucbean/api test",
     "test:cov": "pnpm --filter @ucbean/api test:cov",
     "test:web": "pnpm --filter @ucbean/web test",

@@ -14,10 +14,23 @@ import { LoyaltyModule } from './modules/loyalty/loyalty.module';
 import { DiscountsModule } from './modules/discounts/discounts.module';
 import { RecipesModule } from './modules/recipes/recipes.module';
 import { CampaignsModule } from './modules/campaigns/campaigns.module';
+import { AddressesModule } from './modules/addresses/addresses.module';
+import { PaymentsModule } from './modules/payments/payments.module';
+import { CrmModule } from './modules/crm/crm.module';
+import { UploadsModule } from './modules/uploads/uploads.module';
+import { FavoritesModule } from './modules/favorites/favorites.module';
+import { CafeModule } from './modules/cafe/cafe.module';
 
 @Module({
   imports: [
-    ConfigModule.forRoot({ isGlobal: true }),
+    ConfigModule.forRoot({
+      isGlobal: true,
+      // Development reads .env, which is also what the Prisma CLI and the
+      // seeds read. Production reads only .env.production, never falling back
+      // to .env, so a local database URL can never fill a missing production
+      // key. Variables already set (Railway) always win over either file.
+      envFilePath: process.env.NODE_ENV === 'production' ? '.env.production' : '.env',
+    }),
     ThrottlerModule.forRoot([{ ttl: 60_000, limit: 60 }]),
     EventEmitterModule.forRoot(),
     // Campañas programadas y felicitaciones de cumpleaños.
@@ -33,6 +46,12 @@ import { CampaignsModule } from './modules/campaigns/campaigns.module';
     DiscountsModule,
     RecipesModule,
     CampaignsModule,
+    AddressesModule,
+    PaymentsModule,
+    CrmModule,
+    UploadsModule,
+    FavoritesModule,
+    CafeModule,
   ],
 })
 export class AppModule {}

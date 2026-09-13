@@ -27,7 +27,7 @@ const RECIPES = [
     slug: 'espresso',
     name: 'Espresso',
     kind: 'SIGNATURE' as const,
-    note: 'Dos shots y nada más. Con el que se juzga a un tostador.',
+    note: 'Two shots and nothing else. The one a roaster gets judged on.',
     build: { ...base, base: 'espresso', size: 'small', milk: 'none', vessel: 'here' },
     sortOrder: 1,
   },
@@ -35,7 +35,7 @@ const RECIPES = [
     slug: 'flat-white',
     name: 'Flat White',
     kind: 'SIGNATURE' as const,
-    note: 'Doble ristretto bajo la capa de leche más fina posible.',
+    note: 'A double ristretto under the thinnest milk we can pour.',
     build: { ...base, size: 'small', foam: 'flat', art: 'rosetta', vessel: 'here' },
     sortOrder: 2,
   },
@@ -43,7 +43,7 @@ const RECIPES = [
     slug: 'cappuccino',
     name: 'Cappuccino',
     kind: 'SIGNATURE' as const,
-    note: 'Espuma seca por encima del borde, con canela.',
+    note: 'Dry foam standing above the rim, dusted with cinnamon.',
     build: {
       ...base,
       base: 'espresso',
@@ -58,7 +58,7 @@ const RECIPES = [
     slug: 'latte',
     name: 'Oat Latte',
     kind: 'SIGNATURE' as const,
-    note: 'El más pedido, y en el que dibujamos.',
+    note: 'The one you order most, and the one we pour art into.',
     build: { ...base, milk: 'oat', art: 'heart', vessel: 'here' },
     sortOrder: 4,
   },
@@ -66,7 +66,7 @@ const RECIPES = [
     slug: 'cold-brew',
     name: 'Cold Brew',
     kind: 'SIGNATURE' as const,
-    note: 'Veinte horas de reposo, servido con hielo. Suave, nunca amargo.',
+    note: 'Twenty hours steeping, poured over ice. Smooth, never bitter.',
     build: { ...base, base: 'filter', size: 'large', serve: 'iced', milk: 'none', vessel: 'glass' },
     sortOrder: 5,
   },
@@ -74,7 +74,7 @@ const RECIPES = [
     slug: 'matcha',
     name: 'Matcha Latte',
     kind: 'SIGNATURE' as const,
-    note: 'Grado ceremonial, batido, sobre leche de avena fría.',
+    note: 'Ceremonial grade, whisked, over cold oat milk.',
     build: { ...base, base: 'matcha', serve: 'iced', milk: 'oat', vessel: 'glass' },
     sortOrder: 6,
   },
@@ -83,8 +83,8 @@ const RECIPES = [
     name: 'Yuzu Americano',
     accent: '유자',
     kind: 'SEASONAL' as const,
-    season: 'Otoño',
-    note: 'Cítrico coreano sobre un americano largo. Brillante y ácido.',
+    season: 'Autumn',
+    note: 'Korean citrus over a long americano. Bright and sharp.',
     build: { ...base, base: 'yuzu', serve: 'iced', milk: 'none', vessel: 'glass' },
     sortOrder: 1,
   },
@@ -93,8 +93,8 @@ const RECIPES = [
     name: 'Hojicha Latte',
     accent: 'ほうじ茶',
     kind: 'SEASONAL' as const,
-    season: 'Otoño',
-    note: 'Té verde tostado y leche de avena al vapor. Tostado, poca cafeína.',
+    season: 'Autumn',
+    note: 'Roasted green tea with steamed oat milk. Toasty, barely any caffeine.',
     build: { ...base, base: 'hojicha', milk: 'oat', art: 'tulip', vessel: 'here' },
     sortOrder: 2,
   },
@@ -103,8 +103,8 @@ const RECIPES = [
     name: 'Black Sesame Latte',
     accent: '흑임자',
     kind: 'SEASONAL' as const,
-    season: 'Invierno',
-    note: 'Ajonjolí molido en piedra, avena y una pizca de sal de mar.',
+    season: 'Winter',
+    note: 'Stone-ground sesame, oat milk and a pinch of sea salt.',
     build: {
       ...base,
       beans: 'sumatra',
@@ -119,8 +119,8 @@ const RECIPES = [
     slug: 'fir-cold-brew',
     name: 'Douglas Fir Cold Brew',
     kind: 'SEASONAL' as const,
-    season: 'Primavera',
-    note: 'Cold brew infusionado con brotes de abeto de la Sea-to-Sky.',
+    season: 'Spring',
+    note: 'Cold brew steeped with Douglas fir tips from the Sea-to-Sky.',
     build: {
       ...base,
       base: 'filter',
@@ -136,8 +136,8 @@ const RECIPES = [
     slug: 'sesame-frappe',
     name: 'Sesame Frappé',
     kind: 'SEASONAL' as const,
-    season: 'Verano',
-    note: 'El latte de invierno, licuado, con nata y canela encima.',
+    season: 'Summer',
+    note: 'The winter latte, blended, with cream and cinnamon on top.',
     build: {
       ...base,
       beans: 'sumatra',
@@ -160,20 +160,23 @@ const RECIPES = [
  */
 const REWARDS = [
   {
-    name: 'Café de la casa',
-    description: 'Cualquier bebida de tamaño pequeño',
+    name: 'House coffee',
+    formerName: 'Café de la casa',
+    description: 'Any small drink',
     cost: 80,
     sortOrder: 1,
   },
   {
-    name: 'Bebida mediana a elegir',
-    description: 'La que quieras, del tamaño de doce onzas',
+    name: 'Any medium drink',
+    formerName: 'Bebida mediana a elegir',
+    description: 'Whatever you like, in a twelve-ounce size',
     cost: 120,
     sortOrder: 2,
   },
   {
-    name: 'Bolsa de grano de 250g',
-    description: 'El origen que esté en barra esa semana',
+    name: '250g bag of beans',
+    formerName: 'Bolsa de grano de 250g',
+    description: 'Whichever origin is on the bar that week',
     cost: 300,
     sortOrder: 3,
   },
@@ -187,17 +190,28 @@ async function main() {
   for (const r of RECIPES) {
     await prisma.recipe.upsert({
       where: { slug: r.slug },
-      update: { name: r.name, note: r.note, build: r.build, sortOrder: r.sortOrder },
+      update: {
+        name: r.name,
+        note: r.note,
+        season: 'season' in r ? r.season : null,
+        build: r.build,
+        sortOrder: r.sortOrder,
+      },
       create: r,
     });
   }
 
   for (const r of REWARDS) {
-    const existing = await prisma.reward.findFirst({ where: { name: r.name } });
+    // Se busca también por el nombre antiguo: traducir un premio no puede
+    // crear otro al lado del que ya tienen canjeado los clientes.
+    const { formerName, ...datos } = r as typeof r & { formerName?: string };
+    const existing = await prisma.reward.findFirst({
+      where: { name: { in: formerName ? [datos.name, formerName] : [datos.name] } },
+    });
     if (existing) {
-      await prisma.reward.update({ where: { id: existing.id }, data: r });
+      await prisma.reward.update({ where: { id: existing.id }, data: datos });
     } else {
-      await prisma.reward.create({ data: r });
+      await prisma.reward.create({ data: datos });
     }
   }
 

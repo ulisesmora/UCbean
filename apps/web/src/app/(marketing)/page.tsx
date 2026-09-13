@@ -1,8 +1,11 @@
 import Link from 'next/link';
 import type { Metadata } from 'next';
 import { SeasonalShowcase } from '@/components/features/seasonal/seasonal-showcase';
-import { CoffeeBuilder } from '@/components/features/builder/coffee-builder';
+import { QuickOrder } from '@/components/features/home/quick-order';
+import { CafePulse } from '@/components/features/home/cafe-pulse';
 import { Photo } from '@/components/ui/photo';
+import { MenuCarousel } from '@/components/features/home/menu-carousel';
+import { ReturningRedirect } from '@/components/features/home/returning-redirect';
 
 export const metadata: Metadata = {
   title: 'Around the Bean — Coffee rooted in the forest',
@@ -235,13 +238,6 @@ function AboutSpace() {
 }
 
 /* ── Menu preview ────────────────────────────────────────── */
-const DRINKS = [
-  { name: 'Pour Over', price: '6.50', notes: 'Floral, bergamot, honey', cat: 'Filter' },
-  { name: 'Yuzu Americano', price: '5.50', notes: 'Korean citrus, bright, bold', cat: 'Iced' },
-  { name: 'Cortado', price: '4.50', notes: 'Espresso, equal warm milk', cat: 'Espresso' },
-  { name: 'Hojicha Latte', price: '5.50', notes: 'Roasted green tea, oat milk', cat: 'Hot' },
-];
-
 function MenuPreview() {
   return (
     <section className="bloom relative overflow-hidden border-b-2 border-stone2-900 px-6 py-20 md:py-28">
@@ -257,22 +253,9 @@ function MenuPreview() {
           </Link>
         </div>
 
-        <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
-          {DRINKS.map(({ name, price, notes, cat }) => (
-            <div key={name} className="glass glass-edge glass-hover p-5">
-              <div className="rule-thin mb-5 flex aspect-square items-center justify-center bg-birch-100 font-mono text-[10px] uppercase tracking-[0.2em] text-stone2-400">
-                {cat}
-              </div>
-              <div className="flex items-start justify-between gap-3">
-                <p className="font-seal text-[17px] leading-snug text-stone2-900">{name}</p>
-                <p className="shrink-0 font-mono text-[15px] font-bold tabular-nums text-stone2-900">
-                  ${price}
-                </p>
-              </div>
-              <p className="mt-1.5 font-mono text-[11px] leading-snug text-stone2-400">{notes}</p>
-            </div>
-          ))}
-        </div>
+        {/* La carta de verdad, con la misma tarjeta que /menu: foto, precio del
+            catálogo y el mismo «¿algo más?» al añadir. */}
+        <MenuCarousel />
       </div>
     </section>
   );
@@ -453,14 +436,56 @@ function TableCTA() {
   );
 }
 
+/**
+ * La puerta al configurador, no el configurador.
+ *
+ * Tenerlo entero en la portada obligaba a todo el mundo a pasar por seis
+ * pasos y una escena 3D antes de llegar a la carta. Se queda la invitación,
+ * que es lo que despierta la curiosidad, y quien pica entra a construir.
+ */
+function BuildInvite() {
+  return (
+    <section className="bloom relative overflow-hidden border-b-2 border-stone2-900">
+      <div className="mx-auto flex max-w-6xl flex-col items-start gap-6 px-6 py-16 md:flex-row md:items-center md:justify-between md:py-20">
+        <div className="max-w-lg">
+          <p className="mb-4 inline-flex items-center gap-3 font-mono text-[11px] uppercase tracking-[0.24em] text-stone2-600">
+            <span className="h-2.5 w-2.5 bg-neon-500 ring-1 ring-stone2-900" />
+            Build your own
+          </p>
+          <h2 className="mb-3 text-4xl font-extrabold leading-[1.0] text-stone2-900 md:text-5xl">
+            Make it <span className="marker font-seal italic">yours.</span>
+          </h2>
+          <p className="text-[15px] leading-relaxed text-stone2-600">
+            Bean, size, milk, foam, the pattern on top. Pick each step and watch the cup fill as you
+            go.
+          </p>
+        </div>
+
+        <Link href="/build" className="btn btn-acid shrink-0 px-8 py-4 text-[15px]">
+          Start building
+          <span aria-hidden="true">&rarr;</span>
+        </Link>
+      </div>
+    </section>
+  );
+}
+
 export default function HomePage() {
   return (
     <>
+      {/* Para quien ya tiene cuenta esto va primero: no viene a leer la
+          historia del local otra vez, viene a por su café. La portada de
+          siempre sigue justo debajo. */}
+      {/* Antes que nada, para todo el mundo: ¿está abierto y hay cola? Es
+          lo único que necesita quien está a diez minutos andando. */}
+      <ReturningRedirect />
+      <CafePulse />
+      <QuickOrder />
       <Ticker />
       <Hero />
       <QuickActions />
-      <CoffeeBuilder />
       <SeasonalShowcase />
+      <BuildInvite />
       <AboutSpace />
       <MenuPreview />
       <Gallery />

@@ -3,6 +3,7 @@ import { PrismaService } from '../../../../prisma/prisma.service';
 import { IMailer, MAILER } from '../../../notifications/domain/ports/mailer.port';
 import { Inject } from '@nestjs/common';
 import { fillTemplate } from '../../../notifications/domain/templates';
+import { renderEmail } from '../../../notifications/domain/email-layout';
 import { audienceFilter, canSend, type Audience } from '../../domain/audience';
 
 /**
@@ -87,18 +88,20 @@ export class CampaignsService {
    */
   async send(campaignId: string) {
     const campaign = await this.prisma.campaign.findUnique({ where: { id: campaignId } });
-    if (!campaign) throw new NotFoundException('Esa campaña no existe');
+    if (!campaign) throw new NotFoundException('That campaign does not exist');
 
     if (!canSend(campaign.status, campaign.scheduledAt)) {
       throw new BadRequestException(
         campaign.status === 'SENT'
-          ? 'Esa campaña ya se envió. Duplica la campaña si quieres repetirla.'
-          : `No se puede enviar una campaña en estado ${campaign.status}`,
+          ? 'That campaign was already sent. Duplicate it if you want to send it again.'
+          : `A campaign in status ${campaign.status} cannot be sent`,
       );
     }
 
     if (campaign.channel === 'SMS') {
-      throw new BadRequestException('El canal SMS todavía no está conectado. Usa EMAIL por ahora.');
+      throw new BadRequestException(
+        'The SMS channel is not connected for campaigns yet. Use EMAIL for now.',
+      );
     }
 
     await this.prisma.campaign.update({
@@ -119,10 +122,12 @@ export class CampaignsService {
       });
 
       try {
+        const asunto = campaign.subject ?? campaign.name;
         await this.mailer.send({
           to: person.email,
-          subject: campaign.subject ?? campaign.name,
+          subject: asunto,
           text: body,
+          html: renderEmail(asunto, body),
         });
         await this.recordDelivery(campaignId, person.id, 'SENT');
         await this.prisma.notification.create({

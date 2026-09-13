@@ -32,13 +32,13 @@ export type Rejection =
   | 'ALREADY_USED';
 
 const MOTIVOS: Record<Rejection, string> = {
-  INACTIVE: 'Ese código ya no está disponible',
-  NOT_STARTED: 'Ese código todavía no empieza',
-  EXPIRED: 'Ese código ya venció',
-  NOT_YOURS: 'Ese código es de otra cuenta',
-  BELOW_MINIMUM: 'Tu pedido no llega al mínimo de ese código',
-  EXHAUSTED: 'Ese código ya se agotó',
-  ALREADY_USED: 'Ya usaste ese código',
+  INACTIVE: 'That code is no longer available',
+  NOT_STARTED: 'That code is not active yet',
+  EXPIRED: 'That code has expired',
+  NOT_YOURS: 'That code belongs to another account',
+  BELOW_MINIMUM: 'Your order is below the minimum for that code',
+  EXHAUSTED: 'That code has been used up',
+  ALREADY_USED: 'You already used that code',
 };
 
 /** El texto que ve el cliente. Dice qué pasó, no solo que falló. */

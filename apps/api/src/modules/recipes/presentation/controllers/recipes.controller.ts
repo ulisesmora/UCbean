@@ -21,23 +21,37 @@ export class RecipesController {
   constructor(private readonly recipes: RecipesService) {}
 
   @Get()
-  @ApiOperation({ summary: 'Lo que servimos hoy, con su precio y su ticket' })
+  @ApiOperation({ summary: 'What we serve today, with price and ticket' })
   @ApiQuery({ name: 'kind', required: false, enum: ['SIGNATURE', 'SEASONAL'] })
   current(@Query('kind') kind?: 'SIGNATURE' | 'SEASONAL') {
     return this.recipes.current(kind);
+  }
+
+  @Get('best-sellers')
+  @ApiOperation({
+    summary: 'Most ordered over recent weeks',
+    description: 'Counted from real orders. Empty if nothing has sold yet.',
+  })
+  @ApiQuery({ name: 'days', required: false, example: 30 })
+  @ApiQuery({ name: 'limit', required: false, example: 6 })
+  bestSellers(@Query('days') days?: string, @Query('limit') limit?: string) {
+    // Los topes evitan que una url a mano pida el histórico entero.
+    const ventana = Math.min(Math.max(Number(days) || 30, 1), 365);
+    const cuantas = Math.min(Math.max(Number(limit) || 6, 1), 24);
+    return this.recipes.bestSellers(ventana, cuantas);
   }
 
   @Get('all')
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles('OWNER', 'STAFF')
   @ApiBearerAuth()
-  @ApiOperation({ summary: 'Todas, incluidas las apagadas y fuera de temporada' })
+  @ApiOperation({ summary: 'All of them, including switched off and out of season' })
   all() {
     return this.recipes.all();
   }
 
   @Get(':slug')
-  @ApiOperation({ summary: 'Una receta por su slug' })
+  @ApiOperation({ summary: 'One recipe by its slug' })
   bySlug(@Param('slug') slug: string) {
     return this.recipes.bySlug(slug);
   }
@@ -46,7 +60,7 @@ export class RecipesController {
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles('OWNER')
   @ApiBearerAuth()
-  @ApiOperation({ summary: 'Crear una receta (solo OWNER)' })
+  @ApiOperation({ summary: 'Create a recipe (OWNER only)' })
   create(@Body() dto: CreateRecipeDto) {
     return this.recipes.create(withDates(dto));
   }
@@ -55,7 +69,7 @@ export class RecipesController {
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles('OWNER')
   @ApiBearerAuth()
-  @ApiOperation({ summary: 'Editar una receta (solo OWNER)' })
+  @ApiOperation({ summary: 'Edit a recipe (OWNER only)' })
   update(@Param('id') id: string, @Body() dto: UpdateRecipeDto) {
     return this.recipes.update(id, withDates(dto));
   }

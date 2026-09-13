@@ -20,6 +20,8 @@ export const EVENTS = {
   orderPlaced: 'order.placed',
   orderStatusChanged: 'order.status-changed',
   tableReservationPlaced: 'reservation.table-placed',
+  paymentFailed: 'payment.failed',
+  paymentRefunded: 'payment.refunded',
 } as const;
 
 export interface UserRegisteredEvent {
@@ -57,4 +59,20 @@ export interface TableReservationPlacedEvent {
   userId: string;
   partySize: number;
   scheduledAt: Date;
+}
+
+/** Un intento de pago no salió. El pedido sigue en pie. */
+export interface PaymentFailedEvent {
+  orderId: string;
+  userId: string;
+  /** El motivo que da Stripe, legible para la persona. */
+  reason: string | null;
+}
+
+/** Stripe devolvió dinero de un pedido, entero o en parte. */
+export interface PaymentRefundedEvent {
+  orderId: string;
+  userId: string;
+  amount: number;
+  full: boolean;
 }

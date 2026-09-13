@@ -132,7 +132,7 @@ export const VESSELS: DrinkOption[] = [
 export const SLEEVES: (DrinkOption & { hex: string })[] = [
   { id: 'kraft', name: 'Kraft', note: 'Unbleached card', price: 0, hex: '#C39A5C' },
   { id: 'forest', name: 'Forest', note: 'Deep green', price: 0, hex: '#3C6B4A' },
-  { id: 'acid', name: 'Acid', note: 'The house colour', price: 0, hex: '#2BFF7D' },
+  { id: 'acid', name: 'Olive', note: 'The house colour', price: 0, hex: '#A9C23F' },
   { id: 'ink', name: 'Ink', note: 'Flat black', price: 0, hex: '#1A1A1A' },
   { id: 'clay', name: 'Clay', note: 'Terracotta', price: 0, hex: '#B5654A' },
 ];

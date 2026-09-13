@@ -41,7 +41,7 @@ export class ResendMailer implements IMailer {
       // sin verificar, destinatario inválido, cuota. Sin él, depurar un
       // correo que no llega es adivinar.
       const detail = await res.text().catch(() => '');
-      throw new Error(`Resend respondió ${res.status}: ${detail.slice(0, 300)}`);
+      throw new Error(`Resend responded ${res.status}: ${detail.slice(0, 300)}`);
     }
 
     this.logger.log(`Correo enviado a ${email.to}: ${email.subject}`);

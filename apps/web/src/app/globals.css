@@ -13,7 +13,7 @@
     --font-mono:    'JetBrains Mono',     ui-monospace, monospace;
 
     --ink:     #0A0A0A;
-    --acid:    47 232 107;   /* fill only — never type on white */
+    --acid:    169 194 63;   /* fill only — never type on white */
     --ember:   255 90 24;
     --paper:   #F7F7F4;
 
@@ -129,7 +129,7 @@
   }
 
   .btn-acid { background: rgb(var(--acid)); }
-  .btn-acid:hover { background: #4CF184; }
+  .btn-acid:hover { background: #BCD455; }
 
   .btn-ink {
     background: var(--ink);
@@ -192,6 +192,23 @@
     background-color: rgba(255, 255, 255, 0.46);
     backdrop-filter: blur(38px) saturate(270%) brightness(1.09);
     -webkit-backdrop-filter: blur(38px) saturate(270%) brightness(1.09);
+  }
+
+  /* Glass over a dark scrim, which is the opposite problem.
+     `.glass` is 22% white and reads as grey once the backdrop behind it is
+     black, so dark text on it fails contrast. A panel that sits over the
+     dimmer needs to be white-dominant and let the blur do the work. */
+  .glass-panel {
+    /* Vidrio de verdad, no una caja blanca: el 48% deja ver la pagina
+       difuminada detras. Funciona porque el velo del dialogo se aclaro;
+       sobre uno oscuro esto mismo dejaria el texto ilegible. */
+    background-color: rgba(255, 255, 255, 0.48);
+    backdrop-filter: blur(34px) saturate(220%) brightness(1.08);
+    -webkit-backdrop-filter: blur(34px) saturate(220%) brightness(1.08);
+    box-shadow:
+      inset 0 2px 0 rgba(255, 255, 255, 1),
+      inset 0 16px 30px -18px rgba(255, 255, 255, 0.9),
+      0 24px 60px -28px rgba(10, 10, 10, 0.55);
   }
 
   /* Thinner film, for chrome that floats over scrolling content. */

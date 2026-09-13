@@ -13,4 +13,6 @@ export class ProductResponseDto {
   @Expose() imageUrl: string | null;
   @Expose() isAvailable: boolean;
   @Expose() categoryId: string;
+  /** Nombre de la sección de la carta. La web lo usa para saber si es una bebida. */
+  @Expose() category: { id: string; name: string } | null;
 }

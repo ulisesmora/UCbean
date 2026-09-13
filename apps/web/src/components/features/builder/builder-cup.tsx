@@ -22,7 +22,7 @@ import {
 } from './builder-textures';
 
 /** Builds a PBR set once and releases it with the component. */
-function usePbr(make: () => PbrSet): PbrSet {
+export function usePbr(make: () => PbrSet): PbrSet {
   const set = useMemo(make, []);
   useEffect(() => () => disposeSet(set), [set]);
   return set;
@@ -193,10 +193,10 @@ const SLEEVE_TOP = 1.34;
 const STAGE_SECONDS = [0.9, 2.4, 1.8, 1.2, 1.4];
 
 const clamp01 = (x: number) => THREE.MathUtils.clamp(x, 0, 1);
-const seg = (t: number, a: number, b: number) => clamp01((t - a) / (b - a));
-const easeOut = (x: number) => 1 - Math.pow(1 - x, 3);
+export const seg = (t: number, a: number, b: number) => clamp01((t - a) / (b - a));
+export const easeOut = (x: number) => 1 - Math.pow(1 - x, 3);
 const easeInOut = (x: number) => (x < 0.5 ? 4 * x * x * x : 1 - Math.pow(-2 * x + 2, 3) / 2);
-const easeOutBack = (x: number) => {
+export const easeOutBack = (x: number) => {
   const c = 1.4;
   return 1 + (c + 1) * Math.pow(x - 1, 3) + c * Math.pow(x - 1, 2);
 };
@@ -727,7 +727,7 @@ function Meniscus({
 
 const STEAM_COUNT = 18;
 
-function Steam({ played, y, active }: { played: Clock; y: number; active: boolean }) {
+export function Steam({ played, y, active }: { played: Clock; y: number; active: boolean }) {
   const group = useRef<THREE.Group>(null);
 
   // A soft blob drawn once. No image to ship.
@@ -969,6 +969,83 @@ function Ice({ played, y, radius }: { played: Clock; y: number; radius: number }
   );
 }
 
+/* ── Liquid body, for the glass ─────────────────────────── */
+
+/**
+ * The drink as a volume, not a surface.
+ *
+ * In the paper cup and the mug the liquid is only its top disc, and the opaque
+ * walls hide that there is nothing underneath. A glass shows the lie: you look
+ * straight through the wall and the cup reads as empty, a clear tumbler with a
+ * lid of coffee floating at the top.
+ *
+ * So the glass gets a solid body that follows the inside wall from the floor to
+ * the brim. A clipping plane cuts it at the current level every frame, which
+ * keeps the rising pour exact against the taper without rebuilding geometry.
+ * It is opaque on purpose: three.js only draws opaque objects into the
+ * transmission pass that the glass refracts, so a transparent body would
+ * vanish again behind the glass.
+ */
+function LiquidBody({
+  g,
+  liquidRef,
+  colorRef,
+}: {
+  g: Geom;
+  liquidRef: React.RefObject<THREE.Mesh | null>;
+  colorRef: React.RefObject<THREE.MeshPhysicalMaterial | null>;
+}) {
+  const mesh = useRef<THREE.Mesh>(null);
+  const mat = useRef<THREE.MeshPhysicalMaterial>(null);
+  const plane = useMemo(() => new THREE.Plane(new THREE.Vector3(0, -1, 0), 0), []);
+  const world = useMemo(() => new THREE.Vector3(), []);
+
+  const geometry = useMemo(() => {
+    const floor = floorY(g);
+    const top = g.fillY + 0.04;
+    const pts: THREE.Vector2[] = [new THREE.Vector2(0, floor)];
+    const steps = 32;
+    for (let i = 0; i <= steps; i++) {
+      const y = floor + ((top - floor) * i) / steps;
+      // Same inset as the surface disc, so the two meet without a seam.
+      pts.push(new THREE.Vector2(radiusAt(g, y) * 0.965, y));
+    }
+    pts.push(new THREE.Vector2(0, top));
+    return new THREE.LatheGeometry(pts, 64);
+  }, [g]);
+  useEffect(() => () => geometry.dispose(), [geometry]);
+
+  useFrame(() => {
+    const surface = liquidRef.current;
+    if (!mesh.current || !mat.current || !surface) return;
+    mesh.current.visible = surface.visible;
+    // The plane lives in world space and the cup spins and bobs, so the cut
+    // follows the surface disc's world height rather than a local number.
+    surface.getWorldPosition(world);
+    plane.constant = world.y;
+    if (colorRef.current) mat.current.color.copy(colorRef.current.color);
+  });
+
+  return (
+    <mesh ref={mesh} visible={false}>
+      <primitive object={geometry} attach="geometry" />
+      <meshPhysicalMaterial
+        ref={mat}
+        color="#3B2415"
+        roughness={0.2}
+        clearcoat={0.5}
+        clearcoatRoughness={0.12}
+        // A little sheen reads as liquid depth against the glass wall.
+        sheen={0.35}
+        sheenColor="#FFE7C2"
+        envMapIntensity={1.1}
+        clippingPlanes={[plane]}
+        side={THREE.DoubleSide}
+      />
+    </mesh>
+  );
+}
+
 /* ── Whipped cream ───────────────────────────────────────── */
 
 function Cream({ played, y, radius }: { played: Clock; y: number; radius: number }) {
@@ -977,7 +1054,7 @@ function Cream({ played, y, radius }: { played: Clock; y: number; radius: number
 
   const geometry = useMemo(() => {
     const pts: THREE.Vector2[] = [];
-    const steps = 120;
+    const steps = 140;
     const coils = 4;
     for (let i = 0; i <= steps; i++) {
       const t = i / steps;
@@ -989,7 +1066,30 @@ function Cream({ played, y, radius }: { played: Clock; y: number; radius: number
       const tip = t > 0.92 ? (t - 0.92) * 1.4 : 0;
       pts.push(new THREE.Vector2(Math.max(0.012, taper + coil - tip), t * 0.86));
     }
-    return new THREE.LatheGeometry(pts, 48);
+    const geo = new THREE.LatheGeometry(pts, 112);
+
+    // Star nozzle. A lathe is round all the way around, and round is what made
+    // the cream read as a scoop of plastic. Real piping has ridges from the
+    // nozzle teeth, and they twist with the spiral as the bag turns. Each
+    // vertex is pushed out on the ridges and in on the grooves, following the
+    // coil, and the ridges soften toward the tip where the cream thins out.
+    const RIDGES = 9;
+    const pos = geo.attributes.position;
+    const v = new THREE.Vector3();
+    for (let i = 0; i < pos.count; i++) {
+      v.fromBufferAttribute(pos, i);
+      const r = Math.hypot(v.x, v.z);
+      if (r < 1e-4) continue;
+      const h = v.y / 0.86;
+      const angle = Math.atan2(v.z, v.x);
+      const ridge = Math.cos(angle * RIDGES + h * Math.PI * 2 * coils * 0.9);
+      // Grooves are narrower than ridges, like the cut of a real nozzle.
+      const shaped = Math.sign(ridge) * Math.abs(ridge) ** 0.7;
+      const k = 1 + 0.07 * shaped * (1 - h * 0.75);
+      pos.setXYZ(i, v.x * k, v.y, v.z * k);
+    }
+    geo.computeVertexNormals();
+    return geo;
   }, []);
   useEffect(() => () => geometry.dispose(), [geometry]);
 
@@ -1008,14 +1108,20 @@ function Cream({ played, y, radius }: { played: Clock; y: number; radius: number
     <mesh ref={mesh} visible={false}>
       <primitive object={geometry} attach="geometry" />
       <meshPhysicalMaterial
-        color="#FFFCF6"
-        roughness={0.88}
+        // The PBR set was built and never handed to the material, so the
+        // cream had none of its colour, roughness or relief. It does now.
+        {...cream}
+        color="#FFFDF8"
+        roughness={0.78}
+        normalScale={new THREE.Vector2(0.55, 0.55)}
         // Dairy scatters light a short way in. Without it cream reads as vinyl.
-        sheen={0.85}
-        sheenRoughness={0.6}
-        sheenColor="#FFF4E2"
-        clearcoat={0.04}
-        envMapIntensity={0.6}
+        sheen={0.9}
+        sheenRoughness={0.5}
+        sheenColor="#FFF1DC"
+        // A thin wet film on the ridges, just enough to catch a highlight.
+        clearcoat={0.12}
+        clearcoatRoughness={0.45}
+        envMapIntensity={0.75}
       />
     </mesh>
   );
@@ -1107,7 +1213,7 @@ function Cinnamon({
 
 /** Fired porcelain glaze. High clearcoat over a near-matte body is what
  *  separates china from white plastic. */
-const GLAZE = {
+export const GLAZE = {
   color: '#FAFAF8',
   roughness: 0.14,
   clearcoat: 1,
@@ -1220,7 +1326,19 @@ function Handle() {
 
 /* ── The cup ─────────────────────────────────────────────── */
 
-function Cup({ scene, stage, animate }: { scene: Scene; stage: number; animate: boolean }) {
+function Cup({
+  scene,
+  stage,
+  animate,
+  onComplete,
+  replay = 0,
+}: {
+  scene: Scene;
+  stage: number;
+  animate: boolean;
+  onComplete?: () => void;
+  replay?: number;
+}) {
   const spin = useRef<THREE.Group>(null);
   const shell = useRef<THREE.Group>(null);
   const liquid = useRef<THREE.Mesh>(null);
@@ -1232,13 +1350,21 @@ function Cup({ scene, stage, animate }: { scene: Scene; stage: number; animate: 
   const sleeveMat = useRef<THREE.MeshStandardMaterial>(null);
 
   const played = useRef([0, 0, 0, 0, 0]);
+  // Fired once each time every reached stage has finished playing.
+  const fired = useRef(false);
+  const done = useRef(onComplete);
+  done.current = onComplete;
   const foamPbr = usePbr(foamSet);
   const brewPbr = usePbr(brewSet);
   const paperPbr = usePbr(paperSet);
   const kraftPbr = usePbr(kraftSet);
   const glazePbr = usePbr(glazeSet);
   const togo = scene.vessel === 'togo';
+  // A cold drink to go is a clear plastic cup: an iced drink is bought with
+  // the eyes. Same shape as the paper cup, clear, no sleeve, lid and straw.
+  const clearTogo = togo && (scene.ice || scene.blended);
   const glass = scene.vessel === 'glass';
+  const clear = glass || clearTogo;
   const g = glass ? GLASS : togo ? TOGO : MUG;
 
   const profile = useMemo(() => g.profile.map(([x, y]) => new THREE.Vector2(x, y)), [g]);
@@ -1276,6 +1402,11 @@ function Cup({ scene, stage, animate }: { scene: Scene; stage: number; animate: 
   useEffect(() => {
     rewindFrom(4);
   }, [scene.vessel, scene.sleeve]);
+  // Served again on request, e.g. the moment Add is tapped: the lid goes on
+  // once more, or the cup is set down.
+  useEffect(() => {
+    if (replay > 0) rewindFrom(4);
+  }, [replay]);
 
   const fillY = g.fillY * scene.fill;
   const fillRadius = radiusAt(g, fillY) * 0.95;
@@ -1290,6 +1421,13 @@ function Cup({ scene, stage, animate }: { scene: Scene; stage: number; animate: 
       played.current[i] = animate ? Math.min(1, played.current[i] + delta / STAGE_SECONDS[i]) : 1;
     }
     const [beansT, pourT, milkT, , cupT] = played.current;
+    const finished = played.current.slice(0, top + 1).every((v) => v >= 1);
+    if (finished && !fired.current) {
+      fired.current = true;
+      done.current?.();
+    } else if (!finished) {
+      fired.current = false;
+    }
 
     /* The cup lands as soon as the beans are on screen. */
     const land = easeOut(seg(beansT, 0.15, 1));
@@ -1340,13 +1478,16 @@ function Cup({ scene, stage, animate }: { scene: Scene; stage: number; animate: 
     const cuff = seg(cupT, 0, 0.6);
     if (sleeve.current) {
       sleeve.current.position.y = THREE.MathUtils.lerp(3.0, 0, easeOutBack(cuff));
-      sleeve.current.visible = cuff > 0.004;
+      sleeve.current.visible = cuff > 0.004 && !clearTogo;
     }
     if (lid.current) {
       const cap = seg(cupT, 0.45, 1);
       lid.current.position.y = THREE.MathUtils.lerp(3.4, 0, easeOutBack(cap));
       lid.current.visible = cap > 0.004;
     }
+
+    /* For here there is no lid: the cup is lifted and set down in front of you. */
+    const lift = togo ? 0 : Math.sin(Math.PI * seg(cupT, 0, 0.7)) * 0.14;
 
     /* The cup turns slowly once there is something in it to look at. */
     if (spin.current) {
@@ -1355,9 +1496,9 @@ function Cup({ scene, stage, animate }: { scene: Scene; stage: number; animate: 
       );
       if (animate) {
         spin.current.rotation.y += delta * (0.08 + 0.2 * easeOut(pourT));
-        spin.current.position.y = -1 + Math.sin(state.clock.elapsedTime * 0.8) * 0.025;
+        spin.current.position.y = -1 + Math.sin(state.clock.elapsedTime * 0.8) * 0.025 + lift;
       } else {
-        spin.current.position.y = -1;
+        spin.current.position.y = -1 + lift;
       }
     }
   });
@@ -1367,15 +1508,15 @@ function Cup({ scene, stage, animate }: { scene: Scene; stage: number; animate: 
       <group ref={shell}>
         <mesh>
           <latheGeometry args={[profile, 64]} />
-          {glass ? (
+          {clear ? (
             <meshPhysicalMaterial
               color="#FFFFFF"
               // Real glass: nearly clear, refracting, with a faint green cast
               // in thickness the way soda-lime actually goes.
               roughness={0.02}
               transmission={0.98}
-              thickness={0.38}
-              ior={1.52}
+              thickness={clearTogo ? 0.1 : 0.38}
+              ior={clearTogo ? 1.46 : 1.52}
               attenuationColor="#DDF2E6"
               attenuationDistance={2.4}
               clearcoat={1}
@@ -1450,6 +1591,8 @@ function Cup({ scene, stage, animate }: { scene: Scene; stage: number; animate: 
           the cup at a hard edge is the tell that it is not really liquid. */}
       <Meniscus played={played} g={g} fillY={fillY} colorRef={liquidMat} />
 
+      {clear && <LiquidBody g={g} liquidRef={liquid} colorRef={liquidMat} />}
+
       <Pour played={played} scene={scene} g={g} fillY={fillY} fillRadius={fillRadius} />
 
       {scene.blended && (
@@ -1511,8 +1654,20 @@ function Cup({ scene, stage, animate }: { scene: Scene; stage: number; animate: 
           </group>
 
           {/* A cold drink gets a straw, a hot one gets a lid. */}
-          {scene.ice || scene.cream ? (
+          {scene.ice || scene.blended || scene.cream ? (
             <group ref={lid} visible={false}>
+              {clearTogo && (
+                <mesh position={[0, g.rimY + 0.03, 0]}>
+                  <cylinderGeometry args={[0.9, 0.88, 0.07, 48]} />
+                  <meshPhysicalMaterial
+                    color="#FFFFFF"
+                    roughness={0.05}
+                    transmission={0.9}
+                    thickness={0.05}
+                    ior={1.46}
+                  />
+                </mesh>
+              )}
               <mesh position={[0.22, g.rimY + 0.42, 0.1]} rotation={[0.18, 0, 0.16]}>
                 <cylinderGeometry args={[0.055, 0.055, 1.9, 24, 1, true]} />
                 <meshPhysicalMaterial color="#F2F4F5" roughness={0.18} side={THREE.DoubleSide} />
@@ -1589,7 +1744,7 @@ function CameraRig({ stage, animate }: { stage: number; animate: boolean }) {
 /** Brushed-concrete counter with a real reflection, plus a studio sweep
  *  behind it. Floating on flat white is what read as a render rather than a
  *  photograph: the cup had no surface and nothing to sit in. */
-function Counter() {
+export function Counter() {
   const stone = usePbr(stoneSet);
 
   return (
@@ -1621,7 +1776,7 @@ function Counter() {
  * behind the cup. Shown blurred, so it reads as depth rather than competing
  * with the drink.
  */
-function CafeEnv() {
+export function CafeEnv() {
   // Suspense waits on the photograph, so the scene never renders half-lit.
   const photo = useLoader(THREE.ImageLoader, '/env/cafe-interior.jpg');
   const map = useMemo(() => makeCafeHdri(photo), [photo]);
@@ -1635,16 +1790,27 @@ export default function BuilderCup({
   scene,
   stage,
   animate,
+  onComplete,
+  replay,
 }: {
   scene: Scene;
   stage: number;
   animate: boolean;
+  /** Called when everything up to `stage` has finished playing. */
+  onComplete?: () => void;
+  /** Bump to play the serving stage again: lid on, or cup set down. */
+  replay?: number;
 }) {
   return (
     <Canvas
       dpr={1}
       camera={{ position: [0, 1.75, 9.2], fov: 26 }}
       gl={{ antialias: true, toneMappingExposure: 1.0 }}
+      // El cuerpo de líquido del vaso se recorta con un plano. Sin esto el
+      // renderizador ignora los planos de recorte por material.
+      onCreated={({ gl }) => {
+        gl.localClippingEnabled = true;
+      }}
       aria-hidden="true"
     >
       <Suspense fallback={null}>
@@ -1657,7 +1823,7 @@ export default function BuilderCup({
 
       <CameraRig stage={stage} animate={animate} />
       <Counter />
-      <Cup scene={scene} stage={stage} animate={animate} />
+      <Cup scene={scene} stage={stage} animate={animate} onComplete={onComplete} replay={replay} />
 
       {/* Tight contact shadow on top of the reflection: the reflection places
           the cup, the shadow is what makes it touch. */}

@@ -10,7 +10,7 @@ describe('plantillas de aviso', () => {
   it('dice cuanto dura el enlace de contrasena', () => {
     // Sin el plazo, quien abre el correo al dia siguiente no entiende
     // por que no funciona y vuelve a pedir otro.
-    expect(t.resetPassword('Ana', 'https://x/y').body).toContain('1 hora');
+    expect(t.resetPassword('Ana', 'https://x/y').body).toContain('1 hour');
   });
 
   it('mete la hora de recogida y el codigo cuando el pedido es para llevar', () => {
@@ -24,7 +24,7 @@ describe('plantillas de aviso', () => {
   it('omite hora y codigo cuando el pedido es para tomar en mesa', () => {
     const m = t.orderPlaced(['1 x Cortado'], 4.25);
     expect(m.body).not.toContain('undefined');
-    expect(m.body).not.toContain('listo a las');
+    expect(m.body).not.toContain('ready at');
     expect(m.body).toContain('$4.25');
   });
 
@@ -39,7 +39,7 @@ describe('plantillas de aviso', () => {
       t.tableBooked(2, new Date('2026-09-12T19:00:00')),
       t.pointsEarned(5, 55),
       t.birthday('Ana', 'CUMPLE9X'),
-      t.rewardRedeemed('Cafe gratis', 'ZZ12QR'),
+      t.rewardRedeemed('Free coffee', 'ZZ12QR'),
       t.discountUsed('HOLA123', 1.25),
     ];
     for (const m of todos) {
@@ -51,8 +51,8 @@ describe('plantillas de aviso', () => {
 
   it('el saldo y lo ganado son numeros distintos en el aviso de puntos', () => {
     const m = t.pointsEarned(5, 55);
-    expect(m.title).toContain('5 puntos');
-    expect(m.body).toContain('55 puntos');
+    expect(m.title).toContain('5 points');
+    expect(m.body).toContain('55 points');
   });
 });
 
@@ -81,5 +81,16 @@ describe('fillTemplate', () => {
     // envio. Asi el dueno lo ve en la vista previa.
     const out = t.fillTemplate('Hola {{apellido}}', { nombre: 'Ana', puntos: 0 });
     expect(out).toBe('Hola {{apellido}}');
+  });
+
+  it('fillTemplate entiende {{name}} y {{points}} además de los nombres viejos', () => {
+    // El CRM pasó a inglés. Una campaña nueva usa {{name}}; una escrita antes
+    // usa {{nombre}}. Las dos tienen que llegar rellenas.
+    expect(
+      t.fillTemplate('Hi {{name}}, you have {{ POINTS }} points.', { nombre: 'Ana', puntos: 7 }),
+    ).toBe('Hi Ana, you have 7 points.');
+    expect(t.fillTemplate('Hola {{nombre}}, {{puntos}}', { nombre: 'Ana', puntos: 7 })).toBe(
+      'Hola Ana, 7',
+    );
   });
 });

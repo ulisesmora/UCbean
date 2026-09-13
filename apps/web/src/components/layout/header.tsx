@@ -68,6 +68,14 @@ export function Header() {
 
           {/* Desktop nav */}
           <nav className="hidden items-center gap-7 text-[14px] text-stone2-600 md:flex">
+            {isAuthenticated && (
+              <Link
+                href="/order"
+                className="font-semibold text-stone2-900 transition-colors hover:text-forest-700"
+              >
+                Your usuals
+              </Link>
+            )}
             <Link href="/menu" className="transition-colors hover:text-stone2-900">
               Menu
             </Link>

@@ -73,6 +73,7 @@ model User {
   pushSubscriptions   PushSubscription[]
   campaignDeliveries  CampaignDelivery[]
   verificationTokens  VerificationToken[]
+  favorites           FavoriteDrink[]
 }
 
 model Address {
@@ -118,6 +119,10 @@ model Order {
   total             Decimal     @db.Decimal(10, 2)
   deliveryAddressId String?
   notes             String?
+  /// La llave que manda el navegador por cada intento de pedir. Un doble
+  /// clic, un reintento por red lenta o dos pestañas mandan la misma y se
+  /// devuelve el pedido que ya existe en vez de crear otro.
+  idempotencyKey    String?
   createdAt         DateTime    @default(now())
   updatedAt         DateTime    @updatedAt
 
@@ -127,6 +132,10 @@ model Order {
   statusHistory     OrderStatusHistory[]
   payment           Payment?
   pickupReservation PickupReservation?
+
+  /// Por persona: la llave la inventa el navegador, y no hay por qué
+  /// fiarse de que dos clientes nunca generen la misma.
+  @@unique([userId, idempotencyKey])
 }
 
 model OrderItem {
@@ -148,6 +157,14 @@ model OrderItem {
   /// recipe change never rewrites history.
   nameSnapshot   String?
   ticketSnapshot String?
+
+  /// Extras on a menu item (oat milk, an extra shot). A built drink carries
+  /// its extras inside the formula in `options` instead. Kept so a regular
+  /// can repeat exactly the coffee they had, at today's price.
+  extras String[] @default([])
+
+  /// For here or to go, on a menu item. A built drink keeps it in its build.
+  vessel String?
 
   order   Order   @relation(fields: [orderId], references: [id], onDelete: Cascade)
   product Product @relation(fields: [productId], references: [id])
@@ -223,10 +240,40 @@ model Payment {
   amount          Decimal   @db.Decimal(10, 2)
   status          String
   paidAt          DateTime?
+  /// Con qué se pagó: card, apple_pay, google_pay, link. Lo dice Stripe al cobrar.
+  method          String?
+  /// El motivo del último intento fallido, tal como lo da Stripe.
+  failureCode     String?
+  failureMessage  String?
+  amountRefunded  Decimal   @default(0) @db.Decimal(10, 2)
+  updatedAt       DateTime  @default(now()) @updatedAt
   createdAt       DateTime  @default(now())
 
   order         Order          @relation(fields: [orderId], references: [id])
   paymentMethod PaymentMethod? @relation(fields: [paymentMethodId], references: [id])
+}
+
+/// Cada aviso de Stripe que tocó un pedido, pagado o no.
+///
+/// `stripeEventId` es único: Stripe reintenta el mismo `evt_...` hasta
+/// recibir 200, y el índice es lo que impide aplicarlo dos veces.
+/// Sin claves foráneas a propósito: un aviso puede llegar de un pedido
+/// que ya no está, y el rastro tiene que guardarse igual.
+model PaymentEvent {
+  id             String   @id @default(uuid())
+  stripeEventId  String   @unique
+  type           String
+  orderId        String?
+  intentId       String?
+  status         String?
+  /// En centavos, como lo manda Stripe.
+  amount         Int?
+  currency       String?
+  failureCode    String?
+  failureMessage String?
+  createdAt      DateTime @default(now())
+
+  @@index([orderId, createdAt])
 }
 
 model Notification {
@@ -339,6 +386,9 @@ model PointsEntry {
   card LoyaltyCard @relation(fields: [cardId], references: [id], onDelete: Cascade)
 
   @@index([cardId, createdAt])
+  /// Los puntos de un pedido se dan una vez. Si el aviso de «entregado»
+  /// llega dos veces, la segunda inserción choca aquí y no suma.
+  @@unique([orderId, reason])
 }
 
 model Reward {
@@ -433,6 +483,8 @@ model DiscountRedemption {
   user     User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([discountId, userId])
+  /// Un cupón por pedido, garantizado por la base y no solo por el código.
+  @@unique([orderId])
 }
 
 // ─────────────────────────────────────────────────────────────
@@ -543,4 +595,38 @@ model VerificationToken {
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId, purpose])
+}
+
+// ─────────────────────────────────────────────────────────────
+// Bebidas guardadas
+//
+// «Lo de siempre»: la fórmula que alguien pide una y otra vez,
+// guardada con el nombre que ella le dé. Es el mismo objeto que
+// produce el configurador, así que volver a pedirla es copiar la
+// fórmula al carrito, no rehacer diez pasos.
+// ─────────────────────────────────────────────────────────────
+
+model FavoriteDrink {
+  id     String @id @default(uuid())
+  userId String
+  /// Como la llama quien la guardó: «mi latte», «el de las mañanas».
+  name   String
+
+  /// La fórmula. Misma forma que OrderItem.options.
+  build Json
+
+  /// De qué receta salió, si salió de una del menú.
+  recipeId String?
+  /// El producto del catálogo al que se ancla al pedirla.
+  productId String?
+
+  /// Cuántas veces se ha pedido desde aquí. Ordena la lista sin que
+  /// nadie tenga que arrastrar nada.
+  timesOrdered Int      @default(0)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, timesOrdered])
 }

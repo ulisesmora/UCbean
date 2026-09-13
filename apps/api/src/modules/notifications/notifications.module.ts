@@ -8,10 +8,15 @@ import { SendNotificationUseCase } from './application/use-cases/send-notificati
 import { NotificationListener } from './application/listeners/notification.listener';
 import { NotificationsController } from './presentation/controllers/notifications.controller';
 
+import { PushSender } from './infrastructure/push/push.sender';
+import { SmsSender } from './infrastructure/sms/sms.sender';
+
 @Module({
   imports: [PrismaModule],
   controllers: [NotificationsController],
   providers: [
+    PushSender,
+    SmsSender,
     {
       provide: MAILER,
       inject: [ConfigService],
@@ -23,7 +28,7 @@ import { NotificationsController } from './presentation/controllers/notification
         // y eso no se descubre hasta que un cliente reclama que nunca le
         // llegó su código. Mejor que el arranque falle aquí y ahora.
         if (config.get<string>('NODE_ENV') === 'production') {
-          throw new Error('Falta RESEND_API_KEY. En producción los correos tienen que salir.');
+          throw new Error('RESEND_API_KEY is missing. In production emails must go out.');
         }
         new Logger('Correo').warn('Sin RESEND_API_KEY: los correos van al log, no al buzón.');
         return new LogMailer();

@@ -10,10 +10,14 @@ import {
 } from '../../../products/domain/repositories/product.repository.interface';
 import { OrderEntity, OrderType } from '../../domain/entities/order.entity';
 import type { DrinkBuild } from '../../domain/value-objects/drink-build';
-import { priceOfBuild } from '../../domain/value-objects/drink-price';
+import { priceOfBuild, priceOfExtras } from '../../domain/value-objects/drink-price';
 import { ReservePickupSlotUseCase } from '../../../reservations/application/use-cases/reserve-pickup-slot.use-case';
 import { PickupReservation } from '../../../reservations/domain/entities/pickup-reservation.entity';
 import { EVENTS, type OrderPlacedEvent } from '../../../../common/events/domain-events';
+import { AddressesService } from '../../../addresses/application/use-cases/addresses.service';
+import { DiscountsService } from '../../../discounts/application/use-cases/discounts.service';
+import { PrismaService } from '../../../../prisma/prisma.service';
+import { esDuplicado, serializable } from '../../../../prisma/transaction';
 
 export interface CreateOrderInput {
   userId: string;
@@ -22,10 +26,23 @@ export interface CreateOrderInput {
   deliveryAddressId?: string;
   /** Required for PICKUP. When the customer is coming to collect it. */
   slotTime?: Date;
+  /** Codigo de descuento, si el cliente puso uno. */
+  discountCode?: string;
+  /**
+   * La llave de este intento de pedir, generada en el navegador.
+   * La misma llave dos veces devuelve el mismo pedido, no dos.
+   */
+  idempotencyKey?: string;
+  /** Lo antes posible: el servidor elige el primer hueco con sitio. */
+  asap?: boolean;
   items: {
     productId: string;
     qty: number;
     build?: DrinkBuild;
+    /** Extras sobre un producto de carta. Se cobran encima de su precio. */
+    extras?: string[];
+    /** For here or to go, on a menu item. */
+    vessel?: 'here' | 'togo';
     recipeId?: string;
     name?: string;
     ticket?: string;
@@ -39,20 +56,44 @@ export class CreateOrderUseCase {
     @Inject(PRODUCT_REPOSITORY) private readonly products: IProductRepository,
     private readonly pickup: ReservePickupSlotUseCase,
     private readonly events: EventEmitter2,
+    private readonly addresses: AddressesService,
+    private readonly discounts: DiscountsService,
+    private readonly prisma: PrismaService,
   ) {}
 
   async execute(
     input: CreateOrderInput,
-  ): Promise<{ order: OrderEntity; pickup: PickupReservation | null }> {
+  ): Promise<{ order: OrderEntity; pickup: PickupReservation | null; replayed: boolean }> {
     if (!input.items.length) {
       throw new BadRequestException('Order must have at least one item');
     }
 
-    // Everything that can be rejected is checked before a row is written, so a
-    // bad request leaves nothing behind.
+    // Un doble clic, un reintento de red o dos pestañas mandan la misma
+    // llave. Si ese pedido ya existe se devuelve tal cual: sin cobrar dos
+    // veces el cupón, sin reservar dos plazas y sin mandar dos correos.
+    if (input.idempotencyKey) {
+      const previo = await this.porLlave(input.userId, input.idempotencyKey);
+      if (previo) return previo;
+    }
+
+    let slotTime = input.slotTime;
+
     if (input.type === 'PICKUP') {
-      if (!input.slotTime) throw new BadRequestException('Pick a collection time');
-      await this.pickup.assertOpen(input.slotTime);
+      if (input.asap && !slotTime) {
+        const siguiente = await this.pickup.nextOpenSlot();
+        if (!siguiente) {
+          throw new BadRequestException('No pickup slots left today. Pick a time tomorrow.');
+        }
+        slotTime = siguiente;
+      }
+      if (!slotTime) throw new BadRequestException('Pick a collection time');
+    }
+
+    if (input.type === 'DELIVERY') {
+      if (!input.deliveryAddressId) {
+        throw new BadRequestException('A delivery order needs an address');
+      }
+      await this.addresses.assertOwned(input.deliveryAddressId, input.userId);
     }
 
     const resolvedItems = await Promise.all(
@@ -63,43 +104,103 @@ export class CreateOrderUseCase {
           throw new BadRequestException(`Product "${product.name}" is not available`);
         }
         // Price is ours, never the client's. A built drink is priced by its
-        // formula, which is what makes a large oat latte with a swan cost more
-        // than a small black coffee off the same catalogue row. Anything not
-        // built is priced off the shelf.
+        // formula; a catalogue item by the shelf plus whatever was added on top.
         return {
           ...item,
-          unitPrice: item.build ? priceOfBuild(item.build) : product.price,
+          unitPrice: item.build
+            ? priceOfBuild(item.build)
+            : Math.round((product.price + priceOfExtras(item.extras)) * 100) / 100,
           name: item.name ?? product.name,
         };
       }),
     );
 
-    const order = await this.orders.create({
-      userId: input.userId,
-      type: input.type,
-      notes: input.notes,
-      deliveryAddressId: input.deliveryAddressId,
-      items: resolvedItems,
-    });
+    const bruto = resolvedItems.reduce((s, i) => s + i.qty * i.unitPrice, 0);
 
-    const reservation =
-      input.type === 'PICKUP' && input.slotTime
-        ? await this.pickup.execute(order.id, input.slotTime)
-        : null;
+    let resultado: { order: OrderEntity; pickup: PickupReservation | null };
+    try {
+      // Todo lo que tiene que pasar junto, pasa junto. Antes eran cuatro
+      // escrituras sueltas: si la reserva fallaba después de crear el pedido,
+      // quedaba un pedido sin hora; si el cupón fallaba, un pedido cobrado a
+      // precio completo. Ahora o se escribe todo o no se escribe nada.
+      //
+      // Serializable porque aquí hay dos reglas de «cuenta y luego escribe»:
+      // plazas libres en el hueco y usos que le quedan al cupón.
+      resultado = await serializable(this.prisma, async (tx) => {
+        if (input.type === 'PICKUP' && slotTime) {
+          await this.pickup.assertOpen(slotTime, tx);
+        }
 
+        const applied = input.discountCode
+          ? await this.discounts.preview(input.discountCode, input.userId, bruto, tx)
+          : null;
+
+        const order = await this.orders.create(
+          {
+            userId: input.userId,
+            type: input.type,
+            notes: input.notes,
+            deliveryAddressId: input.deliveryAddressId,
+            discountAmount: applied?.amount,
+            idempotencyKey: input.idempotencyKey,
+            items: resolvedItems,
+          },
+          tx,
+        );
+
+        if (applied && input.discountCode) {
+          await this.discounts.consume(input.discountCode, input.userId, bruto, order.id, tx);
+        }
+
+        const pickup =
+          input.type === 'PICKUP' && slotTime
+            ? await this.pickup.execute(order.id, slotTime, tx)
+            : null;
+
+        return { order, pickup };
+      });
+    } catch (e) {
+      // Dos peticiones con la misma llave a la vez: las dos pasan la
+      // comprobación de arriba, pero el índice único solo deja entrar a una.
+      // La otra recibe el pedido que ganó.
+      if (input.idempotencyKey && esDuplicado(e)) {
+        const ganador = await this.porLlave(input.userId, input.idempotencyKey);
+        if (ganador) return ganador;
+      }
+      throw e;
+    }
+
+    // Los avisos, después de que la transacción se confirmó. Anunciar dentro
+    // y que luego se deshiciera sería mandar un correo de un pedido que no existe.
     this.events.emit(EVENTS.orderPlaced, {
-      orderId: order.id,
-      userId: order.userId,
-      total: order.total,
-      // El ticket de cada línea, que es lo que el cliente reconoce en el
-      // correo. Sin él el aviso diría solo un total y una hora.
-      lines: order.items.map(
-        (i) => `${i.qty} x ${i.name ?? 'Bebida'}${i.ticket ? ` (${i.ticket})` : ''}`,
+      orderId: resultado.order.id,
+      userId: resultado.order.userId,
+      total: resultado.order.total,
+      lines: resultado.order.items.map(
+        (i) => `${i.qty} x ${i.name ?? 'Drink'}${i.ticket ? ` (${i.ticket})` : ''}`,
       ),
-      slotTime: reservation?.slotTime,
-      confirmationCode: reservation?.confirmationCode,
+      slotTime: resultado.pickup?.slotTime,
+      confirmationCode: resultado.pickup?.confirmationCode,
     } satisfies OrderPlacedEvent);
 
-    return { order, pickup: reservation };
+    return { ...resultado, replayed: false };
+  }
+
+  /** El pedido que ya se hizo con esta llave, si lo hay. */
+  private async porLlave(userId: string, idempotencyKey: string) {
+    const fila = await this.prisma.order.findUnique({
+      where: { userId_idempotencyKey: { userId, idempotencyKey } },
+      select: { id: true },
+    });
+    if (!fila) return null;
+
+    const order = await this.orders.findById(fila.id);
+    if (!order) return null;
+
+    const r = await this.pickup.forOrder(fila.id);
+    const pickup = r
+      ? new PickupReservation(r.id, r.orderId, r.slotTime, r.confirmationCode, r.createdAt)
+      : null;
+    return { order, pickup, replayed: true };
   }
 }

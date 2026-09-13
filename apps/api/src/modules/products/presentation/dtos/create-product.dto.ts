@@ -1,10 +1,11 @@
 import {
+  Matches,
+  MaxLength,
   IsString,
   IsNumber,
   IsOptional,
   IsPositive,
   IsUUID,
-  IsUrl,
   Min,
   IsBoolean,
 } from 'class-validator';
@@ -31,9 +32,16 @@ export class CreateProductDto {
   @IsString()
   description?: string;
 
-  @ApiProperty({ example: 'https://cdn.ucbean.ca/yuzu.webp', required: false })
+  @ApiProperty({ example: '/uploads/a3/a3f2…webp', required: false })
   @IsOptional()
-  @IsUrl()
+  @IsString()
+  // Acepta la ruta que devuelve /uploads/image y también una URL entera,
+  // por si algún día las fotos se sirven desde otro sitio. `@IsUrl` solo
+  // admitía lo segundo y rechazaba justo lo que sube el CRM.
+  @Matches(/^(https?:\/\/\S+|\/uploads\/[\w./-]+)$/, {
+    message: 'The image must be a URL or an /uploads path',
+  })
+  @MaxLength(500)
   imageUrl?: string;
 }
 
@@ -62,7 +70,11 @@ export class UpdateProductDto {
 
   @ApiProperty({ required: false })
   @IsOptional()
-  @IsUrl()
+  @IsString()
+  @Matches(/^(https?:\/\/\S+|\/uploads\/[\w./-]+)$/, {
+    message: 'The image must be a URL or an /uploads path',
+  })
+  @MaxLength(500)
   imageUrl?: string;
 
   @ApiProperty({ example: true, required: false })

@@ -14,21 +14,21 @@ export class CreateCampaignDto {
   @ApiProperty({
     enum: ['ALL', 'WITH_POINTS', 'BIRTHDAY_MONTH', 'INACTIVE'],
     description:
-      'ALL escribe a todo el que aceptó publicidad. WITH_POINTS solo a quien tiene saldo. ' +
-      'BIRTHDAY_MONTH a los que cumplen este mes. INACTIVE a quien no pide desde hace 60 dias.',
+      'ALL writes to everyone who accepted marketing. WITH_POINTS only to people with a balance. ' +
+      'BIRTHDAY_MONTH to birthdays this month. INACTIVE to people with no order in 60 days.',
   })
   @IsIn(['ALL', 'WITH_POINTS', 'BIRTHDAY_MONTH', 'INACTIVE'])
   audience: 'ALL' | 'WITH_POINTS' | 'BIRTHDAY_MONTH' | 'INACTIVE';
 
-  @ApiPropertyOptional({ example: 'Vuelve por tu café de siempre' })
+  @ApiPropertyOptional({ example: 'Come back for your usual coffee' })
   @IsOptional()
   @IsString()
   @MaxLength(140)
   subject?: string;
 
   @ApiProperty({
-    example: 'Hola {{nombre}}, llevas {{puntos}} puntos. Pásate esta semana.',
-    description: 'Admite {{nombre}} y {{puntos}}, que se sustituyen por persona.',
+    example: 'Hi {{name}}, you have {{points}} points. Drop by this week.',
+    description: 'Supports {{name}} and {{points}}, filled in per person.',
   })
   @IsString()
   @MaxLength(4000)

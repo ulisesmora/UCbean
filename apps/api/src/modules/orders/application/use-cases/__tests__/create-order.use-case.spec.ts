@@ -38,6 +38,8 @@ describe('CreateOrderUseCase', () => {
   let productRepo: jest.Mocked<IProductRepository>;
   let pickup: jest.Mocked<Pick<ReservePickupSlotUseCase, 'assertOpen' | 'execute'>>;
   let events: { emit: jest.Mock };
+  let addresses: { assertOwned: jest.Mock };
+  let discounts: { preview: jest.Mock; consume: jest.Mock };
 
   beforeEach(() => {
     orderRepo = {
@@ -45,6 +47,7 @@ describe('CreateOrderUseCase', () => {
       findByUser: jest.fn(),
       create: jest.fn(),
       updateStatus: jest.fn(),
+      transition: jest.fn(),
     };
     productRepo = {
       findAll: jest.fn(),
@@ -60,7 +63,26 @@ describe('CreateOrderUseCase', () => {
         .mockResolvedValue(new PickupReservation('pr-1', 'ord-1', SLOT, 'ABC234', new Date())),
     };
     events = fakeEmitter();
-    useCase = new CreateOrderUseCase(orderRepo, productRepo, pickup as any, events as any);
+    addresses = { assertOwned: jest.fn().mockResolvedValue(undefined) };
+    discounts = {
+      preview: jest.fn().mockResolvedValue({ discountId: 'd1', code: 'HOLA1', amount: 1.5 }),
+      consume: jest.fn().mockResolvedValue({}),
+    };
+    // La transacción corre la función con el mismo cliente falso: lo que se
+    // prueba aquí son las reglas del pedido, no Postgres.
+    const prisma = {
+      $transaction: jest.fn((fn: (tx: unknown) => unknown) => fn({})),
+      order: { findUnique: jest.fn().mockResolvedValue(null) },
+    } as any;
+    useCase = new CreateOrderUseCase(
+      orderRepo,
+      productRepo,
+      pickup as any,
+      events as any,
+      addresses as any,
+      discounts as any,
+      prisma,
+    );
   });
 
   it('creates order with valid products', async () => {
@@ -79,6 +101,7 @@ describe('CreateOrderUseCase', () => {
     expect(order.status).toBe('PENDING');
     expect(orderRepo.create).toHaveBeenCalledWith(
       expect.objectContaining({ userId: 'user-1', type: 'PICKUP' }),
+      expect.anything(),
     );
   });
 
@@ -99,7 +122,7 @@ describe('CreateOrderUseCase', () => {
       items: [{ productId: 'p-1', qty: 1 }],
     });
 
-    expect(pickup.execute).toHaveBeenCalledWith('ord-1', SLOT);
+    expect(pickup.execute).toHaveBeenCalledWith('ord-1', SLOT, expect.anything());
     expect(result.pickup?.confirmationCode).toBe('ABC234');
   });
 
@@ -183,7 +206,94 @@ describe('CreateOrderUseCase', () => {
           expect.objectContaining({ build, recipeId: 'latte', unitPrice: 6.2, name: 'P p-1' }),
         ],
       }),
+      expect.anything(),
     );
+  });
+
+  it('exige direccion en un pedido a domicilio', async () => {
+    await expect(
+      useCase.execute({
+        userId: 'user-1',
+        type: 'DELIVERY',
+        items: [{ productId: 'p-1', qty: 1 }],
+      }),
+    ).rejects.toThrow(BadRequestException);
+    expect(orderRepo.create).not.toHaveBeenCalled();
+  });
+
+  it('comprueba que la direccion es de quien pide, antes de escribir nada', async () => {
+    // Sin esto, mandar el id de la direccion de otra persona la devolveria
+    // en el pedido.
+    addresses.assertOwned.mockRejectedValue(new BadRequestException('no es tuya'));
+
+    await expect(
+      useCase.execute({
+        userId: 'user-1',
+        type: 'DELIVERY',
+        deliveryAddressId: 'de-otro',
+        items: [{ productId: 'p-1', qty: 1 }],
+      }),
+    ).rejects.toThrow(BadRequestException);
+    expect(orderRepo.create).not.toHaveBeenCalled();
+  });
+
+  it('aplica el cupon al total y lo gasta despues de escribir el pedido', async () => {
+    productRepo.findById.mockResolvedValue(makeProduct('p-1'));
+    orderRepo.create.mockResolvedValue(makeOrder());
+
+    await useCase.execute({
+      userId: 'user-1',
+      type: 'TABLE',
+      discountCode: 'HOLA1',
+      items: [{ productId: 'p-1', qty: 2 }],
+    });
+
+    // Se comprueba sobre el bruto, 2 x 5.00, no sobre cero.
+    expect(discounts.preview).toHaveBeenCalledWith('HOLA1', 'user-1', 10, expect.anything());
+    expect(orderRepo.create).toHaveBeenCalledWith(
+      expect.objectContaining({ discountAmount: 1.5 }),
+      expect.anything(),
+    );
+    // Se gasta con el id del pedido, que solo existe despues de crearlo.
+    expect(discounts.consume).toHaveBeenCalledWith(
+      'HOLA1',
+      'user-1',
+      10,
+      'ord-1',
+      expect.anything(),
+    );
+  });
+
+  it('no escribe el pedido si el cupon no vale', async () => {
+    // Un cupon caducado tiene que tumbar la peticion entera, no dejar un
+    // pedido a precio completo que el cliente creia con descuento.
+    productRepo.findById.mockResolvedValue(makeProduct('p-1'));
+    discounts.preview.mockRejectedValue(new BadRequestException('Ese codigo ya vencio'));
+
+    await expect(
+      useCase.execute({
+        userId: 'user-1',
+        type: 'TABLE',
+        discountCode: 'VIEJO',
+        items: [{ productId: 'p-1', qty: 1 }],
+      }),
+    ).rejects.toThrow(BadRequestException);
+
+    expect(orderRepo.create).not.toHaveBeenCalled();
+    expect(discounts.consume).not.toHaveBeenCalled();
+  });
+
+  it('no toca descuentos cuando no hay codigo', async () => {
+    productRepo.findById.mockResolvedValue(makeProduct('p-1'));
+    orderRepo.create.mockResolvedValue(makeOrder());
+
+    await useCase.execute({
+      userId: 'user-1',
+      type: 'TABLE',
+      items: [{ productId: 'p-1', qty: 1 }],
+    });
+
+    expect(discounts.preview).not.toHaveBeenCalled();
   });
 
   it('throws NotFoundException when product does not exist', async () => {
@@ -210,5 +320,83 @@ describe('CreateOrderUseCase', () => {
         items: [{ productId: 'p-1', qty: 1 }],
       }),
     ).rejects.toThrow(BadRequestException);
+  });
+
+  describe('idempotencia', () => {
+    it('la misma llave dos veces devuelve el mismo pedido y no crea otro', async () => {
+      // El doble toque en «Place order». La segunda petición no puede crear
+      // un segundo pedido, reservar otra plaza ni mandar otro correo.
+      productRepo.findById.mockResolvedValue(makeProduct('p-1'));
+      orderRepo.findById.mockResolvedValue(makeOrder());
+      (useCase as any).prisma.order.findUnique.mockResolvedValue({ id: 'ord-1' });
+      (pickup as any).forOrder = jest.fn().mockResolvedValue(null);
+
+      const r = await useCase.execute({
+        userId: 'user-1',
+        type: 'TABLE',
+        idempotencyKey: 'llave-de-prueba-1',
+        items: [{ productId: 'p-1', qty: 2 }],
+      });
+
+      expect(r.replayed).toBe(true);
+      expect(r.order.id).toBe('ord-1');
+      expect(orderRepo.create).not.toHaveBeenCalled();
+      expect(events.emit).not.toHaveBeenCalled();
+    });
+
+    it('si dos llegan a la vez, la que pierde el índice único recibe el pedido ganador', async () => {
+      const { Prisma } = require('@prisma/client');
+      productRepo.findById.mockResolvedValue(makeProduct('p-1'));
+      orderRepo.findById.mockResolvedValue(makeOrder());
+      (pickup as any).forOrder = jest.fn().mockResolvedValue(null);
+
+      const prisma = (useCase as any).prisma;
+      // Primera consulta: todavía no existe. Tras el choque: ya existe.
+      prisma.order.findUnique.mockResolvedValueOnce(null).mockResolvedValueOnce({ id: 'ord-1' });
+      prisma.$transaction.mockRejectedValueOnce(
+        new Prisma.PrismaClientKnownRequestError('Unique constraint failed', {
+          code: 'P2002',
+          clientVersion: 'test',
+        }),
+      );
+
+      const r = await useCase.execute({
+        userId: 'user-1',
+        type: 'TABLE',
+        idempotencyKey: 'llave-de-prueba-2',
+        items: [{ productId: 'p-1', qty: 2 }],
+      });
+
+      expect(r.replayed).toBe(true);
+      expect(events.emit).not.toHaveBeenCalled();
+    });
+
+    it('un choque de serialización se reintenta y termina creando el pedido', async () => {
+      const { Prisma } = require('@prisma/client');
+      productRepo.findById.mockResolvedValue(makeProduct('p-1'));
+      orderRepo.create.mockResolvedValue(makeOrder());
+
+      const prisma = (useCase as any).prisma;
+      const original = prisma.$transaction.getMockImplementation();
+      // Primer intento: Postgres aborta por conflicto con otra transacción.
+      prisma.$transaction
+        .mockRejectedValueOnce(
+          new Prisma.PrismaClientKnownRequestError('could not serialize access', {
+            code: 'P2034',
+            clientVersion: 'test',
+          }),
+        )
+        .mockImplementation(original);
+
+      const r = await useCase.execute({
+        userId: 'user-1',
+        type: 'TABLE',
+        items: [{ productId: 'p-1', qty: 2 }],
+      });
+
+      expect(r.replayed).toBe(false);
+      expect(prisma.$transaction).toHaveBeenCalledTimes(2);
+      expect(events.emit).toHaveBeenCalledTimes(1);
+    });
   });
 });

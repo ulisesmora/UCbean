@@ -37,6 +37,55 @@ export class RecipesService {
     return rows.map((r) => this.decorate(r));
   }
 
+  /**
+   * Las más pedidas, de verdad.
+   *
+   * Se cuenta sobre `OrderItem.recipeId`, que es la huella que deja una
+   * receta al pedirse, no sobre un contador en la fila: un contador hay
+   * que acordarse de subirlo y se desincroniza el día que alguien cancela
+   * un pedido a mano.
+   *
+   * La ventana existe porque «lo más vendido» de hace un año no es una
+   * recomendación, es historia. Y los pedidos cancelados no cuentan: nadie
+   * se bebió esos.
+   *
+   * ponytail: un groupBy por consulta. Con el volumen de una cafetería de
+   * campus sobra; si algún día pesa, esto es una vista materializada que
+   * se refresca por la noche.
+   */
+  async bestSellers(days = 30, limit = 6) {
+    const desde = new Date(Date.now() - days * 24 * 60 * 60 * 1000);
+
+    const ventas = await this.prisma.orderItem.groupBy({
+      by: ['recipeId'],
+      where: {
+        recipeId: { not: null },
+        order: { createdAt: { gte: desde }, status: { not: 'CANCELLED' } },
+      },
+      _sum: { qty: true },
+      orderBy: { _sum: { qty: 'desc' } },
+      take: limit,
+    });
+
+    if (ventas.length === 0) return [];
+
+    // `recipeId` guarda el slug, que es lo que viaja en la línea de pedido.
+    const slugs = ventas.map((v) => v.recipeId!).filter(Boolean);
+    const recetas = await this.prisma.recipe.findMany({
+      where: { slug: { in: slugs }, isActive: true },
+    });
+
+    // Se reordena según las ventas: el `findMany` devuelve en su orden, no
+    // en el del ranking, y el ranking es justo lo que se está enseñando.
+    const porSlug = new Map(recetas.map((r) => [r.slug, r]));
+    return ventas
+      .map((v) => {
+        const receta = porSlug.get(v.recipeId!);
+        return receta ? { ...this.decorate(receta), sold: v._sum.qty ?? 0 } : null;
+      })
+      .filter((r): r is NonNullable<typeof r> => r !== null);
+  }
+
   async bySlug(slug: string) {
     const row = await this.prisma.recipe.findUnique({ where: { slug } });
     if (!row) throw new NotFoundException(`No tenemos ninguna receta llamada ${slug}`);

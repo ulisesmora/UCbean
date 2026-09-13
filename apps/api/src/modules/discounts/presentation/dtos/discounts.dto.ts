@@ -18,7 +18,7 @@ export class PreviewDiscountDto {
   @MaxLength(40)
   code: string;
 
-  @ApiProperty({ example: 12.5, description: 'Total del pedido antes de descontar' })
+  @ApiProperty({ example: 12.5, description: 'Order total before the discount' })
   @IsNumber()
   @Min(0)
   @Type(() => Number)
@@ -31,7 +31,7 @@ export class CreateDiscountDto {
   @MaxLength(40)
   code: string;
 
-  @ApiProperty({ example: '15% durante la primera semana de clases' })
+  @ApiProperty({ example: '15% during the first week of classes' })
   @IsString()
   @MaxLength(240)
   description: string;

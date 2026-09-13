@@ -27,7 +27,7 @@ export class LoyaltyListener {
   @OnEvent(EVENTS.userRegistered)
   async onRegistered(e: UserRegisteredEvent) {
     await this.loyalty.addPoints(e.userId, SIGNUP_POINTS, 'SIGNUP', {
-      note: 'Bienvenida',
+      note: 'Welcome bonus',
     });
   }
 

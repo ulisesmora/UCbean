@@ -1,4 +1,4 @@
-import { priceOfBuild } from '../drink-price';
+import { priceOfBuild, priceOfExtras, describeExtras } from '../drink-price';
 import type { DrinkBuild } from '../drink-build';
 
 /**
@@ -71,5 +71,30 @@ describe('priceOfBuild', () => {
 
   it('charges nothing for an id it does not recognise, rather than throwing', () => {
     expect(priceOfBuild(build({ beans: 'unknown-origin' }))).toBe(4.0);
+  });
+});
+
+describe('priceOfExtras — los añadidos de un producto de carta', () => {
+  it('suma solo lo añadido, no recalcula la bebida', () => {
+    // Un flat white de la carta con canela cuesta el flat white más la
+    // canela. Si esto devolviera el precio de una fórmula entera, el menú
+    // estaría mintiendo.
+    expect(priceOfExtras(['cinnamon'])).toBe(0);
+    expect(priceOfExtras(['extrashot'])).toBe(1);
+    expect(priceOfExtras(['syrup', 'cream'])).toBe(1.5);
+  });
+
+  it('sin extras no suma nada', () => {
+    expect(priceOfExtras(undefined)).toBe(0);
+    expect(priceOfExtras([])).toBe(0);
+  });
+
+  it('un extra retirado de la carta suma cero en vez de romper el pedido', () => {
+    expect(priceOfExtras(['ingrediente-que-ya-no-existe'])).toBe(0);
+  });
+
+  it('describeExtras los deja legibles para la barra', () => {
+    expect(describeExtras(['cinnamon', 'extrashot'])).toBe('cinnamon, extra shot');
+    expect(describeExtras([])).toBe('');
   });
 });

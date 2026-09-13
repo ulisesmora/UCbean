@@ -21,6 +21,12 @@ export class OrderItemEntity {
      */
     public readonly name: string | null = null,
     public readonly ticket: string | null = null,
+    /** La foto del producto, para el historial del cliente. */
+    public readonly imageUrl: string | null = null,
+    /** Extras on a menu item. A built drink keeps them inside its build. */
+    public readonly extras: string[] = [],
+    /** For here or to go, on a menu item. */
+    public readonly vessel: string | null = null,
   ) {}
 
   get subtotal(): number {

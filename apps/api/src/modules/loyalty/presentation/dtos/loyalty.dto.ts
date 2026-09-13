@@ -31,12 +31,12 @@ export class GrantPointsDto {
   @IsUUID()
   userId: string;
 
-  @ApiProperty({ example: 25, description: 'Negativo para quitar puntos' })
+  @ApiProperty({ example: 25, description: 'Negative to remove points' })
   @IsInt()
   @Type(() => Number)
   delta: number;
 
-  @ApiProperty({ example: 'Disculpa por la espera del martes' })
+  @ApiProperty({ example: 'Sorry for the wait on Tuesday' })
   @IsString()
   @MaxLength(200)
   note: string;

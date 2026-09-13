@@ -31,7 +31,7 @@ export class NotificationsController {
   constructor(private readonly prisma: PrismaService) {}
 
   @Get()
-  @ApiOperation({ summary: 'Mis avisos, del más reciente al más viejo' })
+  @ApiOperation({ summary: 'My notifications, newest first' })
   @ApiQuery({ name: 'unread', required: false, example: 'true' })
   async mine(@CurrentUser() user: JwtPayloadVo, @Query('unread') unread?: string) {
     return this.prisma.notification.findMany({
@@ -42,7 +42,7 @@ export class NotificationsController {
   }
 
   @Patch(':id/read')
-  @ApiOperation({ summary: 'Marcar un aviso como leído' })
+  @ApiOperation({ summary: 'Mark a notification as read' })
   async markRead(@CurrentUser() user: JwtPayloadVo, @Param('id') id: string) {
     // El userId va en el where, no solo el id: sin él cualquiera podría
     // marcar como leídos los avisos de otra persona.
@@ -54,7 +54,7 @@ export class NotificationsController {
   }
 
   @Post('push')
-  @ApiOperation({ summary: 'Registrar este navegador para avisos push' })
+  @ApiOperation({ summary: 'Register this browser for push notifications' })
   async registerPush(@CurrentUser() user: JwtPayloadVo, @Body() dto: RegisterPushDto) {
     // El endpoint es único por navegador. Volver a suscribirse desde el
     // mismo equipo actualiza, no duplica.
@@ -73,7 +73,7 @@ export class NotificationsController {
   }
 
   @Delete('push')
-  @ApiOperation({ summary: 'Dar de baja este navegador' })
+  @ApiOperation({ summary: 'Unregister this browser' })
   async unregisterPush(@CurrentUser() user: JwtPayloadVo, @Body() dto: { endpoint: string }) {
     await this.prisma.pushSubscription.deleteMany({
       where: { endpoint: dto.endpoint, userId: user.sub },

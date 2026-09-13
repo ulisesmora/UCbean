@@ -485,6 +485,62 @@ export function stoneSet(): PbrSet {
 }
 
 /** Releases every texture in a set. */
+/* ── Baked crust ─────────────────────────────────────────── */
+
+/**
+ * Bread, pastry and dough, in one set.
+ *
+ * The colour map is near white so each bake tints it with its own colour: a
+ * croissant golden, banana bread dark, a tortilla pale. What it carries is what
+ * every oven leaves: soft browned patches, small blistered spots, flour specks,
+ * and a surface that is matte where dry and a little shinier where it browned.
+ */
+export function crustSet(): PbrSet {
+  const S = 512;
+  const [ac, actx] = canvas(S);
+  actx.fillStyle = '#ffffff';
+  actx.fillRect(0, 0, S, S);
+  mottle(actx, S, 90, [30, 90], () => `rgba(150,105,60,${0.08 + Math.random() * 0.12})`);
+  mottle(actx, S, 700, [2, 7], () => `rgba(120,78,40,${0.15 + Math.random() * 0.3})`);
+  for (let i = 0; i < 1500; i++) {
+    actx.fillStyle = `rgba(255,248,235,${0.2 + Math.random() * 0.4})`;
+    actx.fillRect(
+      Math.random() * S,
+      Math.random() * S,
+      1 + Math.random() * 2,
+      1 + Math.random() * 2,
+    );
+  }
+
+  const [rc, rctx] = canvas(S);
+  rctx.fillStyle = 'rgb(190,190,190)';
+  rctx.fillRect(0, 0, S, S);
+  mottle(rctx, S, 260, [6, 26], () => `rgba(120,120,120,${0.3 + Math.random() * 0.3})`);
+
+  const [nc, nctx] = canvas(S);
+  nctx.fillStyle = NORMAL_FLAT;
+  nctx.fillRect(0, 0, S, S);
+  // Pores and blisters: small bumps lit from one side.
+  for (let i = 0; i < 900; i++) {
+    const x = Math.random() * S;
+    const y = Math.random() * S;
+    const r = 2 + Math.random() * 6;
+    const g = nctx.createRadialGradient(x - r * 0.3, y - r * 0.3, 0, x, y, r);
+    g.addColorStop(0, 'rgba(165,165,255,0.6)');
+    g.addColorStop(1, 'rgba(96,96,255,0)');
+    nctx.fillStyle = g;
+    nctx.beginPath();
+    nctx.arc(x, y, r, 0, Math.PI * 2);
+    nctx.fill();
+  }
+
+  return {
+    map: texture(ac, { srgb: true, repeat: [2, 2] }),
+    roughnessMap: texture(rc, { repeat: [2, 2] }),
+    normalMap: texture(nc, { repeat: [2, 2] }),
+  };
+}
+
 export function disposeSet(set: PbrSet) {
   set.map?.dispose();
   set.roughnessMap?.dispose();

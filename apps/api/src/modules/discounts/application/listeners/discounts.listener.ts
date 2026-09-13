@@ -9,7 +9,7 @@ import { DiscountsService } from '../use-cases/discounts.service';
 export const WELCOME_DISCOUNT = {
   kind: 'PERCENT' as const,
   value: 10,
-  description: 'Bienvenida: 10% en tu primer pedido',
+  description: 'Welcome: 10% off your first order',
   days: 30,
 };
 

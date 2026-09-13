@@ -17,6 +17,7 @@ export class PrismaProductRepository implements IProductRepository {
     imageUrl: string | null;
     createdAt: Date;
     updatedAt: Date;
+    category?: { id: string; name: string } | null;
   }): Product {
     return new Product(
       r.id,
@@ -28,6 +29,7 @@ export class PrismaProductRepository implements IProductRepository {
       r.imageUrl,
       r.createdAt,
       r.updatedAt,
+      r.category ? { id: r.category.id, name: r.category.name } : null,
     );
   }
 
@@ -35,12 +37,16 @@ export class PrismaProductRepository implements IProductRepository {
     const rows = await this.prisma.product.findMany({
       where: categoryId ? { categoryId } : undefined,
       orderBy: { name: 'asc' },
+      include: { category: { select: { id: true, name: true } } },
     });
     return rows.map((r) => this.toEntity(r));
   }
 
   async findById(id: string): Promise<Product | null> {
-    const r = await this.prisma.product.findUnique({ where: { id } });
+    const r = await this.prisma.product.findUnique({
+      where: { id },
+      include: { category: { select: { id: true, name: true } } },
+    });
     return r ? this.toEntity(r) : null;
   }
 

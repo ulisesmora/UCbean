@@ -8,17 +8,17 @@ export class RegisterPushDto {
   @MaxLength(600)
   endpoint: string;
 
-  @ApiProperty({ description: 'Llave pública del navegador, en base64url' })
+  @ApiProperty({ description: 'Browser public key, base64url' })
   @IsString()
   @MaxLength(200)
   p256dh: string;
 
-  @ApiProperty({ description: 'Secreto de autenticación, en base64url' })
+  @ApiProperty({ description: 'Auth secret, base64url' })
   @IsString()
   @MaxLength(100)
   auth: string;
 
-  @ApiPropertyOptional({ description: 'Para saber desde qué equipo se dio de alta' })
+  @ApiPropertyOptional({ description: 'Which device registered it' })
   @IsOptional()
   @IsString()
   @MaxLength(300)

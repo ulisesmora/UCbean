@@ -271,7 +271,7 @@ export const VESSELS: (Option & { id: Vessel })[] = [
 export const SLEEVES: { id: string; name: string; hex: string }[] = [
   { id: 'kraft', name: 'Kraft', hex: '#C39A5C' },
   { id: 'forest', name: 'Forest', hex: '#3C6B4A' },
-  { id: 'acid', name: 'Acid', hex: '#2BFF7D' },
+  { id: 'acid', name: 'Oliva', hex: '#A9C23F' },
   { id: 'ink', name: 'Ink', hex: '#1A1A1A' },
   { id: 'clay', name: 'Clay', hex: '#B5654A' },
 ];
@@ -406,7 +406,9 @@ export function sceneOf(build: Build) {
     sugar: build.extras.includes('sugar'),
     /** Syrup darkens the brew slightly and leaves it glossier. */
     syrup: build.extras.includes('syrup'),
-    vessel: build.vessel,
+    // Cold is always clear: an iced drink ordered for here comes in glass,
+    // never in a ceramic mug.
+    vessel: build.serve !== 'hot' && build.vessel === 'here' ? ('glass' as Vessel) : build.vessel,
     sleeve: sleeveOf(build).hex,
     /** Iced and blended drinks are filled higher and colder. */
     fill: build.serve === 'hot' ? 1 : 1.04,

@@ -12,7 +12,7 @@ import { CampaignsService } from '../use-cases/campaigns.service';
 export const BIRTHDAY_DISCOUNT = {
   kind: 'AMOUNT' as const,
   value: 6,
-  description: 'Cumpleaños: un café por nuestra cuenta',
+  description: 'Birthday: a coffee on us',
   days: 30,
 };
 
@@ -83,7 +83,7 @@ export class CampaignScheduler {
       if (yaFelicitado) continue;
 
       await this.loyalty.addPoints(person.id, BIRTHDAY_POINTS, 'BIRTHDAY', {
-        note: 'Cumpleaños',
+        note: 'Birthday',
       });
       await this.notify.execute({
         userId: person.id,

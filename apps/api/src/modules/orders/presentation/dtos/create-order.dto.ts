@@ -8,6 +8,7 @@ import {
   IsOptional,
   IsString,
   IsDateString,
+  IsBoolean,
   IsIn,
   MaxLength,
   ArrayMaxSize,
@@ -100,6 +101,22 @@ export class OrderItemInputDto {
   build?: DrinkBuildDto;
 
   @ApiPropertyOptional({
+    example: ['cinnamon', 'extrashot'],
+    description:
+      'Extras on a menu item. Charged on top of the menu price; they do not replace the formula.',
+  })
+  @IsOptional()
+  @IsArray()
+  @IsString({ each: true })
+  @ArrayMaxSize(8)
+  extras?: string[];
+
+  @ApiPropertyOptional({ enum: ['here', 'togo'], description: 'For here or to go, on a menu item' })
+  @IsOptional()
+  @IsIn(['here', 'togo'])
+  vessel?: 'here' | 'togo';
+
+  @ApiPropertyOptional({
     example: 'hojicha-latte',
     description: 'Menu recipe this came from, omitted when the customer built it',
   })
@@ -139,6 +156,24 @@ export class CreateOrderDto {
   @IsOptional()
   @IsDateString()
   slotTime?: string;
+
+  @ApiPropertyOptional({
+    description:
+      'As soon as possible. The server picks the first slot with room, ' +
+      'so slotTime is not needed.',
+  })
+  @IsOptional()
+  @IsBoolean()
+  asap?: boolean;
+
+  @ApiPropertyOptional({
+    example: 'HOLA7KQP2',
+    description: 'Discount code. The server checks it again and works out the amount.',
+  })
+  @IsOptional()
+  @IsString()
+  @MaxLength(40)
+  discountCode?: string;
 
   @ApiProperty({ example: 'Extra oat milk please', required: false })
   @IsOptional()

@@ -1,3 +1,4 @@
+import { esDuplicado } from '../../../../prisma/transaction';
 import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
 import { randomBytes } from 'node:crypto';
 import { PrismaService } from '../../../../prisma/prisma.service';
@@ -43,9 +44,15 @@ export class LoyaltyService {
     extra: { orderId?: string; note?: string } = {},
   ): Promise<number> {
     const card = await this.cardFor(userId);
-    await this.prisma.pointsEntry.create({
-      data: { cardId: card.id, delta, reason, orderId: extra.orderId, note: extra.note },
-    });
+    try {
+      await this.prisma.pointsEntry.create({
+        data: { cardId: card.id, delta, reason, orderId: extra.orderId, note: extra.note },
+      });
+    } catch (e) {
+      // El índice único (pedido, motivo) es lo que impide dar dos veces los
+      // puntos de un mismo pedido. Si choca, ya se dieron: no es un error.
+      if (!esDuplicado(e)) throw e;
+    }
     return this.balanceOf(userId);
   }
 
@@ -53,6 +60,14 @@ export class LoyaltyService {
   async rewardOrder(userId: string, orderId: string, total: number): Promise<number> {
     const points = pointsForOrder(total);
     const card = await this.cardFor(userId);
+
+    // El sello también se da una sola vez por pedido. Sin esta comprobación
+    // un aviso repetido sumaría dos sellos aunque el índice frene los puntos.
+    const yaPremiado = await this.prisma.pointsEntry.findFirst({
+      where: { orderId, reason: 'ORDER' },
+      select: { id: true },
+    });
+    if (yaPremiado) return this.balanceOf(userId);
 
     await this.prisma.loyaltyCard.update({
       where: { id: card.id },
@@ -83,12 +98,12 @@ export class LoyaltyService {
    */
   async redeem(userId: string, rewardId: string) {
     const reward = await this.prisma.reward.findUnique({ where: { id: rewardId } });
-    if (!reward || !reward.isActive) throw new NotFoundException('Ese premio no existe');
+    if (!reward || !reward.isActive) throw new NotFoundException('Reward not found');
 
     const balance = await this.balanceOf(userId);
     if (!canAfford(balance, reward.cost)) {
       throw new BadRequestException(
-        `Te faltan ${reward.cost - balance} puntos para ${reward.name}`,
+        `You need ${reward.cost - balance} more points for ${reward.name}`,
       );
     }
 

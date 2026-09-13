@@ -41,3 +41,10 @@ coverage/
 # ── Misc ──────────────────────────────────────────────────
 .turbo/
 pgdata/
+
+# Fotos de producto subidas desde el CRM. Son datos, no codigo.
+apps/api/uploads/
+
+# Per-environment files hold real keys too.
+.env.development
+.env.production

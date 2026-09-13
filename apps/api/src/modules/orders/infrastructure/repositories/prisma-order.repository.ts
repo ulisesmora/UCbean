@@ -1,5 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
+import type { Tx } from '../../../../prisma/transaction';
 import { PrismaService } from '../../../../prisma/prisma.service';
 import {
   IOrderRepository,
@@ -27,6 +28,9 @@ type PrismaOrderFull = {
     recipeId: string | null;
     nameSnapshot: string | null;
     ticketSnapshot: string | null;
+    extras: string[];
+    vessel: string | null;
+    product?: { name: string; imageUrl: string | null } | null;
   }[];
 };
 
@@ -46,6 +50,13 @@ export class PrismaOrderRepository implements IOrderRepository {
           i.recipeId,
           i.nameSnapshot,
           i.ticketSnapshot,
+          // La foto sale del catalogo y no de una copia del dia: si se
+          // cambia la foto de un producto, el historial ensena la nueva.
+          // El nombre si esta copiado, porque ahi si importa lo que el
+          // cliente vio cuando pidio.
+          i.product?.imageUrl ?? null,
+          i.extras ?? [],
+          i.vessel ?? null,
         ),
     );
     return new OrderEntity(
@@ -63,7 +74,7 @@ export class PrismaOrderRepository implements IOrderRepository {
   }
 
   private get include() {
-    return { items: true };
+    return { items: { include: { product: { select: { name: true, imageUrl: true } } } } };
   }
 
   async findById(id: string): Promise<OrderEntity | null> {
@@ -80,11 +91,17 @@ export class PrismaOrderRepository implements IOrderRepository {
     return rows.map((r) => this.toEntity(r as any));
   }
 
-  async create(data: CreateOrderData): Promise<OrderEntity> {
-    const total = data.items.reduce((sum, i) => sum + i.qty * i.unitPrice, 0);
-    const r = await this.prisma.order.create({
+  async create(data: CreateOrderData, tx?: unknown): Promise<OrderEntity> {
+    const db = (tx as Tx | undefined) ?? this.prisma;
+    const bruto = data.items.reduce((sum, i) => sum + i.qty * i.unitPrice, 0);
+    // Nunca por debajo de cero: un cupon mayor que el pedido deja el total
+    // en cero, no en negativo, que seria devolverle dinero a alguien por
+    // comprar barato.
+    const total = Math.max(0, Math.round((bruto - (data.discountAmount ?? 0)) * 100) / 100);
+    const r = await db.order.create({
       data: {
         userId: data.userId,
+        idempotencyKey: data.idempotencyKey,
         type: data.type as any,
         total,
         notes: data.notes,
@@ -101,6 +118,8 @@ export class PrismaOrderRepository implements IOrderRepository {
             recipeId: i.recipeId,
             nameSnapshot: i.name,
             ticketSnapshot: i.ticket,
+            extras: i.extras ?? [],
+            vessel: i.vessel,
           })),
         },
         statusHistory: { create: { status: 'PENDING' } },
@@ -108,6 +127,26 @@ export class PrismaOrderRepository implements IOrderRepository {
       include: this.include,
     });
     return this.toEntity(r as any);
+  }
+
+  async transition(
+    id: string,
+    from: OrderStatus,
+    to: OrderStatus,
+    note?: string,
+  ): Promise<OrderEntity | null> {
+    const hecho = await this.prisma.$transaction(async (tx) => {
+      // La condición `status: from` es el cerrojo. Si otra persona ya lo
+      // movió, esto afecta a cero filas y no se escribe historial.
+      const { count } = await tx.order.updateMany({
+        where: { id, status: from as any },
+        data: { status: to as any },
+      });
+      if (count === 0) return false;
+      await tx.orderStatusHistory.create({ data: { orderId: id, status: to as any, note } });
+      return true;
+    });
+    return hecho ? this.findById(id) : null;
   }
 
   async updateStatus(id: string, status: OrderStatus, note?: string): Promise<OrderEntity> {
