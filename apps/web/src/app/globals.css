@@ -165,17 +165,26 @@
   }
 
   /* ── Liquid glass ─────────────────────────────────────────
-     Frosted panel with an ink outline. The blur is what makes it
-     glass; the hard border is what keeps it brutalist. It only
-     reads as glass when a bloom is drifting behind it, so these
-     belong on sections that carry one. */
+     Panel with an ink outline, a lit edge and a sheen. The hard border
+     keeps it brutalist.
+
+     Two kinds. Real glass (backdrop-filter) re-blurs whatever is behind it
+     on every frame, and a page full of cards doing that, over a bloom that
+     never stops drifting, was the heaviest thing on a phone. So only a few
+     surfaces keep it: the header, the mobile tab bar, dialogs and sheets
+     (.glass-bar, .glass-panel), plus anything marked .glass-live.
+
+     Every other .glass is simulated: the same translucent white, edge and
+     sheen, with no live blur. What sits behind a card is a bloom that is
+     already blurred by 84px or more, so blurring it again changed almost
+     nothing on screen and cost a lot. */
 
   .glass {
     /* Less white, more blur. The panel should show what is behind it, not
        hide it, which is the whole point of the material. */
-    background-color: rgba(255, 255, 255, 0.22);
-    backdrop-filter: blur(40px) saturate(300%) brightness(1.08);
-    -webkit-backdrop-filter: blur(40px) saturate(300%) brightness(1.08);
+    /* A little more white than the real glass had: without the blur doing
+       part of the work, this is what keeps text on it easy to read. */
+    background-color: rgba(255, 255, 255, 0.4);
     border: 2px solid var(--ink);
     border-radius: 5px;
     box-shadow:
@@ -186,12 +195,18 @@
       /* the panel's own weight, caught under the bottom edge */
       inset 0 -10px 22px -18px rgba(10, 10, 10, 0.45),
       0 14px 34px -26px rgba(10, 10, 10, 0.5);
-    transition: background-color 240ms ease, backdrop-filter 240ms ease;
+    transition: background-color 240ms ease;
   }
   .glass-hover:hover {
-    background-color: rgba(255, 255, 255, 0.46);
-    backdrop-filter: blur(38px) saturate(270%) brightness(1.09);
-    -webkit-backdrop-filter: blur(38px) saturate(270%) brightness(1.09);
+    background-color: rgba(255, 255, 255, 0.58);
+  }
+
+  /* Opt in to real glass on a small surface floating over something worth
+     seeing through, like the price over the 3D cup. Keep these few. */
+  .glass-live {
+    background-color: rgba(255, 255, 255, 0.26);
+    backdrop-filter: blur(18px) saturate(170%) brightness(1.06);
+    -webkit-backdrop-filter: blur(18px) saturate(170%) brightness(1.06);
   }
 
   /* Glass over a dark scrim, which is the opposite problem.
@@ -202,9 +217,10 @@
     /* Vidrio de verdad, no una caja blanca: el 48% deja ver la pagina
        difuminada detras. Funciona porque el velo del dialogo se aclaro;
        sobre uno oscuro esto mismo dejaria el texto ilegible. */
-    background-color: rgba(255, 255, 255, 0.48);
-    backdrop-filter: blur(34px) saturate(220%) brightness(1.08);
-    -webkit-backdrop-filter: blur(34px) saturate(220%) brightness(1.08);
+    background-color: rgba(255, 255, 255, 0.5);
+    /* Real glass, lighter than before: the look holds at half the radius. */
+    backdrop-filter: blur(20px) saturate(170%) brightness(1.06);
+    -webkit-backdrop-filter: blur(20px) saturate(170%) brightness(1.06);
     box-shadow:
       inset 0 2px 0 rgba(255, 255, 255, 1),
       inset 0 16px 30px -18px rgba(255, 255, 255, 0.9),
@@ -213,9 +229,9 @@
 
   /* Thinner film, for chrome that floats over scrolling content. */
   .glass-bar {
-    background-color: rgba(255, 255, 255, 0.52);
-    backdrop-filter: blur(34px) saturate(220%) brightness(1.04);
-    -webkit-backdrop-filter: blur(34px) saturate(220%) brightness(1.04);
+    background-color: rgba(255, 255, 255, 0.56);
+    backdrop-filter: blur(18px) saturate(160%) brightness(1.04);
+    -webkit-backdrop-filter: blur(18px) saturate(160%) brightness(1.04);
     box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.9);
   }
 
@@ -294,7 +310,17 @@
 }
 
 @supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
-  .glass, .glass-bar { background: rgba(255, 255, 255, 0.92); }
+  .glass-live, .glass-bar, .glass-panel { background-color: rgba(255, 255, 255, 0.92); }
+}
+
+/* Phones and touch screens: the blooms hold still. A full-screen blurred layer
+   that never stops moving repaints on every frame, and keeps anything with
+   real glass on top of it re-blurring too. Desktop keeps the drift. */
+@media (hover: none), (max-width: 767px) {
+  .bloom::before,
+  .page-bloom::before {
+    animation: none;
+  }
 }
 
 @media (prefers-reduced-motion: reduce) {

@@ -70,6 +70,14 @@ async function bootstrap() {
   app.enableCors({
     origin: origins?.length ? origins : true,
     credentials: true,
+    // The Fastify CORS plugin allows only GET, HEAD and POST unless told
+    // otherwise. The counter app changes order status and edits products
+    // with PATCH and DELETE, so from another domain the browser blocked
+    // exactly those calls while every read worked.
+    methods: ['GET', 'HEAD', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
+    // The browser may reuse a preflight for 10 minutes instead of asking
+    // again before every request.
+    maxAge: 600,
   });
 
   // OpenAPI spec

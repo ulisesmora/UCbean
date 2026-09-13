@@ -140,6 +140,41 @@ function Choice({
   );
 }
 
+/** Height of the sticky header, plus a little air above the preview. */
+const HEADER_OFFSET = 76;
+
+/**
+ * Resolves once the page stops scrolling.
+ *
+ * `scrollend` where the browser has it; otherwise the position is watched
+ * until it holds still for a few frames. A ceiling keeps a stuck scroll from
+ * holding the animation back forever.
+ */
+function waitForScrollEnd(maxMs = 1200): Promise<void> {
+  return new Promise((resolve) => {
+    let finished = false;
+    const finish = () => {
+      if (finished) return;
+      finished = true;
+      window.removeEventListener('scrollend', finish);
+      resolve();
+    };
+    window.addEventListener('scrollend', finish, { once: true });
+    window.setTimeout(finish, maxMs);
+
+    let last = window.scrollY;
+    let still = 0;
+    const watch = () => {
+      if (finished) return;
+      still = window.scrollY === last ? still + 1 : 0;
+      last = window.scrollY;
+      if (still >= 4) finish();
+      else requestAnimationFrame(watch);
+    };
+    requestAnimationFrame(watch);
+  });
+}
+
 export function CoffeeBuilder({
   initialBuild,
   eyebrow = 'Build your own',
@@ -152,6 +187,9 @@ export function CoffeeBuilder({
 } = {}) {
   const [build, setBuild] = useState<Build>(initialBuild ?? DEFAULT_BUILD);
   const [step, setStep] = useState(0);
+  // The stage the 3D is showing. On mobile it trails `step` until the
+  // preview has scrolled into view, so the animation is watched, not missed.
+  const [shownStep, setShownStep] = useState(0);
   const [animate, setAnimate] = useState(true);
   // Only one WebGL context should be alive at a time on this page.
   const { ref: stage, mounted: visible, generation } = useWebglStage<HTMLDivElement>();
@@ -204,6 +242,42 @@ export function CoffeeBuilder({
       extras: b.extras.includes(id) ? b.extras.filter((e) => e !== id) : [...b.extras, id],
     }));
 
+  /** Any step change that is not Next: panel and 3D move together. */
+  const goTo = (i: number) => {
+    setStep(i);
+    setShownStep(i);
+  };
+
+  /**
+   * Next.
+   *
+   * On a phone the preview sits above the options, so after picking something
+   * down the page the next stage would play out of sight. The panel advances
+   * straight away; the page scrolls the preview up under the header; the 3D
+   * starts the new stage only once it has arrived. Desktop has the preview
+   * beside the options and advances both at once, as before.
+   */
+  const goNext = () => {
+    const next = Math.min(STEPS.length - 1, step + 1);
+    setStep(next);
+
+    const el = stage.current;
+    const mobile = window.matchMedia('(max-width: 767px)').matches;
+    if (!el || !mobile) {
+      setShownStep(next);
+      return;
+    }
+
+    const offset = el.getBoundingClientRect().top - HEADER_OFFSET;
+    if (Math.abs(offset) < 24) {
+      setShownStep(next);
+      return;
+    }
+
+    window.scrollTo({ top: window.scrollY + offset, behavior: animate ? 'smooth' : 'auto' });
+    void waitForScrollEnd().then(() => setShownStep(next));
+  };
+
   return (
     <section
       aria-labelledby="builder-heading"
@@ -231,14 +305,14 @@ export function CoffeeBuilder({
             <div className="glass glass-edge aspect-square w-full overflow-hidden md:aspect-[4/5]">
               {visible ? (
                 <PreviewBoundary key={generation}>
-                  <BuilderCup scene={scene} stage={STEP_STAGE[step]} animate={animate} />
+                  <BuilderCup scene={scene} stage={STEP_STAGE[shownStep]} animate={animate} />
                 </PreviewBoundary>
               ) : (
                 <div className="h-full w-full animate-pulse bg-birch-200/50" />
               )}
             </div>
 
-            <div className="glass glass-edge pointer-events-none absolute -bottom-6 left-6 flex items-baseline gap-3 px-5 py-2.5">
+            <div className="glass glass-live glass-edge pointer-events-none absolute -bottom-6 left-6 flex items-baseline gap-3 px-5 py-2.5">
               <span className="font-mono text-xl font-bold tabular-nums text-stone2-900">
                 ${total.toFixed(2)}
               </span>
@@ -256,7 +330,7 @@ export function CoffeeBuilder({
                 <li key={s.id} className="flex-1">
                   <button
                     type="button"
-                    onClick={() => setStep(i)}
+                    onClick={() => goTo(i)}
                     aria-current={i === step ? 'step' : undefined}
                     className={`h-1.5 w-full border border-stone2-900 transition-colors ${
                       i <= step ? 'bg-neon-500' : 'bg-transparent'
@@ -432,7 +506,7 @@ export function CoffeeBuilder({
             <div className="mt-7 flex flex-wrap gap-3">
               <button
                 type="button"
-                onClick={() => setStep((s) => Math.max(0, s - 1))}
+                onClick={() => goTo(Math.max(0, step - 1))}
                 disabled={step === 0}
                 className="btn px-6 py-3 text-[14px] disabled:cursor-not-allowed disabled:opacity-40"
               >
@@ -441,7 +515,7 @@ export function CoffeeBuilder({
               {step < STEPS.length - 1 ? (
                 <button
                   type="button"
-                  onClick={() => setStep((s) => Math.min(STEPS.length - 1, s + 1))}
+                  onClick={goNext}
                   className="btn btn-acid px-7 py-3 text-[14px]"
                 >
                   Next

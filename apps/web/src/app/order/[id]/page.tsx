@@ -2,7 +2,6 @@
 
 import { use, useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
-import dynamic from 'next/dynamic';
 import { useQuery } from '@tanstack/react-query';
 import { AnimatePresence, MotionConfig, motion } from 'framer-motion';
 import { Bell, BellRing, Check, Heart, Loader2 } from 'lucide-react';
@@ -11,18 +10,11 @@ import { useAuthStore } from '@/stores/auth.store';
 import { useSaveFavorite } from '@/hooks/use-favorites';
 import { sceneOf, DEFAULT_BUILD, type Build } from '@/lib/builder';
 import { useWebglStage } from '@/hooks/use-webgl-stage';
+import { productImage } from '@/lib/images';
+import { AdaptiveCup } from '@/components/features/builder/serve-poster';
 import { pushState, subscribePush, type PushState } from '@/lib/push';
 import type { Order } from '@/types/api.types';
 import { toast } from 'sonner';
-
-const BuilderCup = dynamic(() => import('@/components/features/builder/builder-cup'), {
-  ssr: false,
-  loading: () => (
-    <div className="flex h-full w-full items-center justify-center">
-      <Loader2 size={20} className="animate-spin text-stone2-400" />
-    </div>
-  ),
-});
 
 const EASE = [0.22, 0.9, 0.24, 1] as const;
 
@@ -278,13 +270,15 @@ function Tracker({ order, live }: { order: Order; live: boolean }) {
           }`}
         >
           {visible ? (
-            <BuilderCup
+            <AdaptiveCup
               // Remontar en cada fase reproduce el llenado hasta el punto
               // nuevo, que es justo lo que se quiere ver al avanzar.
               key={`${generation}-${fase}`}
               scene={scene}
               stage={PHASES[fase].stage}
               animate
+              poster={productImage({ name: 'coffee' })}
+              posterAlt="Your drink"
             />
           ) : (
             <div className="h-full w-full animate-pulse bg-birch-200/50" />

@@ -12,6 +12,9 @@ import { buildForProduct, foodKindFor, isDrink, withVessel } from '@/lib/product
 import { useLiveRecipes } from '@/hooks/use-recipes';
 import { useProducts } from '@/hooks/use-products';
 import { useCartStore } from '@/stores/cart.store';
+import { useDeviceQuality } from '@/lib/device-quality';
+import { productImage } from '@/lib/images';
+import { ServePoster } from '@/components/features/builder/serve-poster';
 import type { Product } from '@/types/api.types';
 
 function Loading3d() {
@@ -78,6 +81,9 @@ export function CustomiseSheet({
   const addItem = useCartStore((s) => s.addItem);
   const openCart = useCartStore((s) => s.openCart);
   const { signatures, seasonals } = useLiveRecipes();
+  // On a low-power device the product photo stands in for the 3D, and the
+  // dialog still waits for it to be "served" before closing.
+  const quality = useDeviceQuality();
 
   const [extras, setExtras] = useState<string[]>([]);
   const [where, setWhere] = useState<Where>('togo');
@@ -238,7 +244,14 @@ export function CustomiseSheet({
             {/* Absolute on purpose: the Three.js canvas sizes itself, and inside
                 the dialog's column it pushed the box past its slot. */}
             <div className="absolute inset-0">
-              {drink ? (
+              {quality === 'low' ? (
+                <ServePoster
+                  src={productImage(product)}
+                  alt={name}
+                  replay={replay}
+                  onComplete={onServed}
+                />
+              ) : drink ? (
                 <BuilderCup
                   key={product.id}
                   scene={scene}

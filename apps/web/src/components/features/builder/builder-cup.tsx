@@ -2,7 +2,7 @@
 
 import { Canvas, useFrame, useLoader } from '@react-three/fiber';
 import { ContactShadows, Environment, RoundedBox } from '@react-three/drei';
-import { Suspense, useEffect, useMemo, useRef } from 'react';
+import { Suspense, useCallback, useEffect, useMemo, useRef } from 'react';
 import type { MutableRefObject } from 'react';
 import * as THREE from 'three';
 import type { sceneOf } from '@/lib/builder';
@@ -20,6 +20,8 @@ import {
   stoneSet,
   type PbrSet,
 } from './builder-textures';
+import { QualityContext, useQuality, useSceneLoop } from './render-budget';
+import { useDeviceQuality, type Quality } from '@/lib/device-quality';
 
 /** Builds a PBR set once and releases it with the component. */
 export function usePbr(make: () => PbrSet): PbrSet {
@@ -729,6 +731,7 @@ const STEAM_COUNT = 18;
 
 export function Steam({ played, y, active }: { played: Clock; y: number; active: boolean }) {
   const group = useRef<THREE.Group>(null);
+  const count = useQuality() !== 'high' ? 8 : STEAM_COUNT;
 
   // A soft blob drawn once. No image to ship.
   const texture = useMemo(() => {
@@ -750,8 +753,8 @@ export function Steam({ played, y, active }: { played: Clock; y: number; active:
 
   const wisps = useMemo(
     () =>
-      Array.from({ length: STEAM_COUNT }, (_, i) => ({
-        phase: i / STEAM_COUNT + Math.random() * 0.04,
+      Array.from({ length: count }, (_, i) => ({
+        phase: i / count + Math.random() * 0.04,
         speed: 0.15 + Math.random() * 0.1,
         drift: (Math.random() - 0.5) * 0.55,
         offsetX: (Math.random() - 0.5) * 0.5,
@@ -891,6 +894,7 @@ function Slush({
 const ICE_COUNT = 11;
 
 function Ice({ played, y, radius }: { played: Clock; y: number; radius: number }) {
+  const lite = useQuality() !== 'high';
   const group = useRef<THREE.Group>(null);
   const ice = usePbr(iceSet);
 
@@ -953,7 +957,9 @@ function Ice({ played, y, radius }: { played: Clock; y: number; radius: number }
             // scene, so one shared material across eleven cubes is the budget.
             {...ice}
             roughness={0.18 + c.cloud * 0.3}
-            transmission={0.82 - c.cloud * 0.25}
+            transmission={lite ? 0 : 0.82 - c.cloud * 0.25}
+            transparent={lite}
+            opacity={lite ? 0.55 + c.cloud * 0.3 : 1}
             thickness={0.45 + c.cloud * 0.4}
             ior={1.309}
             attenuationColor="#C6E2F5"
@@ -1146,11 +1152,12 @@ function Cinnamon({
   const inst = useRef<THREE.InstancedMesh>(null);
   const dummy = useMemo(() => new THREE.Object3D(), []);
 
+  const dust = useQuality() !== 'high' ? 36 : DUST_COUNT;
   // Dust lands heavier near the middle, the way it falls off a shaker.
   const spread = scene.cream ? 0.42 : 0.86;
   const grains = useMemo(
     () =>
-      Array.from({ length: DUST_COUNT }, () => {
+      Array.from({ length: dust }, () => {
         const a = Math.random() * Math.PI * 2;
         const r = Math.pow(Math.random(), 0.62);
         return {
@@ -1195,7 +1202,7 @@ function Cinnamon({
   return (
     <instancedMesh
       ref={inst}
-      args={[undefined, undefined, DUST_COUNT]}
+      args={[undefined, undefined, dust]}
       position={[0, fillY + (scene.cream ? 0.02 : 0.014), 0]}
       visible={false}
     >
@@ -1230,12 +1237,13 @@ const SUGAR_COUNT = 34;
 /** Sugar crystals dropping in and sinking. Faceted, not round: a sphere reads
  *  as a bubble, and sugar is cut glass at this scale. */
 function Sugar({ played, y, radius }: { played: Clock; y: number; radius: number }) {
+  const grainCount = useQuality() !== 'high' ? 14 : SUGAR_COUNT;
   const inst = useRef<THREE.InstancedMesh>(null);
   const dummy = useMemo(() => new THREE.Object3D(), []);
 
   const grains = useMemo(
     () =>
-      Array.from({ length: SUGAR_COUNT }, () => {
+      Array.from({ length: grainCount }, () => {
         const a = Math.random() * Math.PI * 2;
         return {
           a,
@@ -1275,7 +1283,7 @@ function Sugar({ played, y, radius }: { played: Clock; y: number; radius: number
   return (
     <instancedMesh
       ref={inst}
-      args={[undefined, undefined, SUGAR_COUNT]}
+      args={[undefined, undefined, grainCount]}
       position={[0, y, 0]}
       visible={false}
     >
@@ -1365,6 +1373,9 @@ function Cup({
   const clearTogo = togo && (scene.ice || scene.blended);
   const glass = scene.vessel === 'glass';
   const clear = glass || clearTogo;
+  // Refraction renders the whole scene a second time. Lighter tiers draw
+  // plain see-through glass instead: same silhouette, a fraction of the work.
+  const lite = useQuality() !== 'high';
   const g = glass ? GLASS : togo ? TOGO : MUG;
 
   const profile = useMemo(() => g.profile.map(([x, y]) => new THREE.Vector2(x, y)), [g]);
@@ -1412,7 +1423,10 @@ function Cup({
   const fillRadius = radiusAt(g, fillY) * 0.95;
   const scratch = useMemo(() => new THREE.Color(), []);
 
-  useFrame((state, delta) => {
+  useFrame((state, rawDelta) => {
+    // A long pause (hidden tab, idle scene) arrives as one huge delta. Capped,
+    // so waking up never skips an animation straight to its last frame.
+    const delta = Math.min(rawDelta, 1 / 20);
     const k = damping(delta);
 
     // Only stages the user has reached advance, and each holds once at 1.
@@ -1514,7 +1528,10 @@ function Cup({
               // Real glass: nearly clear, refracting, with a faint green cast
               // in thickness the way soda-lime actually goes.
               roughness={0.02}
-              transmission={0.98}
+              transmission={lite ? 0 : 0.98}
+              transparent={lite}
+              opacity={lite ? 0.24 : 1}
+              depthWrite={!lite}
               thickness={clearTogo ? 0.1 : 0.38}
               ior={clearTogo ? 1.46 : 1.52}
               attenuationColor="#DDF2E6"
@@ -1662,7 +1679,9 @@ function Cup({
                   <meshPhysicalMaterial
                     color="#FFFFFF"
                     roughness={0.05}
-                    transmission={0.9}
+                    transmission={lite ? 0 : 0.9}
+                    transparent={lite}
+                    opacity={lite ? 0.3 : 1}
                     thickness={0.05}
                     ior={1.46}
                   />
@@ -1719,7 +1738,8 @@ function CameraRig({ stage, animate }: { stage: number; animate: boolean }) {
   const wanted = useMemo(() => new THREE.Vector3(), []);
   const wantedLook = useMemo(() => new THREE.Vector3(), []);
 
-  useFrame((state, delta) => {
+  useFrame((state, rawDelta) => {
+    const delta = Math.min(rawDelta, 1 / 20);
     const f = FRAMINGS[Math.min(stage, FRAMINGS.length - 1)];
     const time = state.clock.elapsedTime;
 
@@ -1777,11 +1797,21 @@ export function Counter() {
  * with the drink.
  */
 export function CafeEnv() {
+  const lite = useQuality() !== 'high';
   // Suspense waits on the photograph, so the scene never renders half-lit.
-  const photo = useLoader(THREE.ImageLoader, '/env/cafe-interior.jpg');
+  const photo = useLoader(THREE.ImageLoader, '/env/cafe-interior.webp');
   const map = useMemo(() => makeCafeHdri(photo), [photo]);
   useEffect(() => () => map.dispose(), [map]);
-  return <Environment map={map} background backgroundBlurriness={0.6} environmentIntensity={1.0} />;
+  return (
+    <Environment
+      map={map}
+      // The blurred café behind the cup is a full-screen pass of its own.
+      // Lighter tiers keep it for reflections only.
+      background={!lite}
+      backgroundBlurriness={0.6}
+      environmentIntensity={1.0}
+    />
+  );
 }
 
 /* ── Scene ───────────────────────────────────────────────── */
@@ -1801,41 +1831,69 @@ export default function BuilderCup({
   /** Bump to play the serving stage again: lid on, or cup set down. */
   replay?: number;
 }) {
+  const detected = useDeviceQuality();
+  // Places where the 3D is decoration swap in a photo on low devices
+  // (AdaptiveCup). Anything that still mounts the cup there, like the drink
+  // builder, gets the lighter mid scene.
+  const quality: Quality = detected === 'low' ? 'mid' : detected;
+  const lite = quality !== 'high';
+  const { ref, frameloop, markDone } = useSceneLoop(scene, stage, animate, replay);
+  const done = useRef(onComplete);
+  done.current = onComplete;
+  const handleComplete = useCallback(() => {
+    markDone();
+    done.current?.();
+  }, [markDone]);
+
   return (
-    <Canvas
-      dpr={1}
-      camera={{ position: [0, 1.75, 9.2], fov: 26 }}
-      gl={{ antialias: true, toneMappingExposure: 1.0 }}
-      // El cuerpo de líquido del vaso se recorta con un plano. Sin esto el
-      // renderizador ignora los planos de recorte por material.
-      onCreated={({ gl }) => {
-        gl.localClippingEnabled = true;
-      }}
-      aria-hidden="true"
-    >
-      <Suspense fallback={null}>
-        <CafeEnv />
-      </Suspense>
+    <div ref={ref} className="h-full w-full">
+      <Canvas
+        // Sharper pixels on dense screens, only where the GPU has room.
+        dpr={lite ? 1 : [1, 1.5]}
+        frameloop={frameloop}
+        camera={{ position: [0, 1.75, 9.2], fov: 26 }}
+        gl={{ antialias: true, toneMappingExposure: 1.0 }}
+        // El cuerpo de líquido del vaso se recorta con un plano. Sin esto el
+        // renderizador ignora los planos de recorte por material.
+        onCreated={({ gl }) => {
+          gl.localClippingEnabled = true;
+        }}
+        aria-hidden="true"
+      >
+        <QualityContext.Provider value={quality}>
+          {/* Without the blurred café behind it, a flat warm tone. */}
+          {lite && <color attach="background" args={['#E9E2D6']} />}
+          <Suspense fallback={null}>
+            <CafeEnv />
+          </Suspense>
 
-      <ambientLight intensity={0.3} color="#F2F6F8" />
-      <directionalLight position={[3.6, 6, 4]} intensity={2.1} color="#FFF8F0" />
-      <directionalLight position={[-4.5, 2, -3]} intensity={0.6} color="#BFD8FF" />
+          <ambientLight intensity={0.3} color="#F2F6F8" />
+          <directionalLight position={[3.6, 6, 4]} intensity={2.1} color="#FFF8F0" />
+          <directionalLight position={[-4.5, 2, -3]} intensity={0.6} color="#BFD8FF" />
 
-      <CameraRig stage={stage} animate={animate} />
-      <Counter />
-      <Cup scene={scene} stage={stage} animate={animate} onComplete={onComplete} replay={replay} />
+          <CameraRig stage={stage} animate={animate} />
+          <Counter />
+          <Cup
+            scene={scene}
+            stage={stage}
+            animate={animate}
+            onComplete={handleComplete}
+            replay={replay}
+          />
 
-      {/* Tight contact shadow on top of the reflection: the reflection places
-          the cup, the shadow is what makes it touch. */}
-      <ContactShadows
-        position={[0, -1.018, 0]}
-        opacity={0.55}
-        scale={5}
-        blur={1.5}
-        far={1.6}
-        resolution={512}
-        color="#3A342C"
-      />
-    </Canvas>
+          {/* Tight contact shadow on top of the reflection: the reflection places
+              the cup, the shadow is what makes it touch. */}
+          <ContactShadows
+            position={[0, -1.018, 0]}
+            opacity={0.55}
+            scale={5}
+            blur={1.5}
+            far={1.6}
+            resolution={lite ? 256 : 512}
+            color="#3A342C"
+          />
+        </QualityContext.Provider>
+      </Canvas>
+    </div>
   );
 }

@@ -1,16 +1,12 @@
 'use client';
 
-import dynamic from 'next/dynamic';
 import { useEffect, useMemo, useState } from 'react';
 import { recipePrice, recipeScene, type Recipe } from '@/lib/recipes';
 import { useWebglStage } from '@/hooks/use-webgl-stage';
 import { useBestSellers, useLiveRecipes } from '@/hooks/use-recipes';
-
-// One 3D scene now serves the whole site, so there is a single cup to maintain
-// and a single WebGL context to pay for.
-const BuilderCup = dynamic(() => import('@/components/features/builder/builder-cup'), {
-  ssr: false,
-});
+import { productImage } from '@/lib/images';
+// The 3D here is decoration: a photo on low-power devices.
+import { AdaptiveCup } from '@/components/features/builder/serve-poster';
 
 type Tab = 'signature' | 'seasonal' | 'popular';
 
@@ -98,12 +94,14 @@ export function SeasonalShowcase() {
           <div ref={stage} className="relative md:col-span-6">
             <div className="rule aspect-[4/3] w-full overflow-hidden bg-birch-100 shadow-hard-lg sm:aspect-square md:aspect-[4/5]">
               {visible && scene ? (
-                <BuilderCup
+                <AdaptiveCup
                   // Remounting on the drink replays the whole build.
                   key={`${generation}-${drink.id}`}
                   scene={scene}
                   stage={4}
                   animate={animate}
+                  poster={productImage({ name: drink.name })}
+                  posterAlt={drink.name}
                 />
               ) : (
                 <div className="h-full w-full animate-pulse bg-birch-200" />

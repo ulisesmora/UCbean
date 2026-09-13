@@ -2,11 +2,13 @@
 
 import { Canvas, useFrame } from '@react-three/fiber';
 import { ContactShadows, RoundedBox } from '@react-three/drei';
-import { Suspense, useEffect, useMemo, useRef } from 'react';
+import { Suspense, useCallback, useEffect, useMemo, useRef } from 'react';
 import * as THREE from 'three';
 import type { FoodKind } from '@/lib/product-scene';
 import { CafeEnv, Counter, GLAZE, Steam, easeOut, easeOutBack, seg, usePbr } from './builder-cup';
 import { beanSet, crustSet, paperSet, type PbrSet } from './builder-textures';
+import { QualityContext, useQuality, useSceneLoop } from './render-budget';
+import { useDeviceQuality, type Quality } from '@/lib/device-quality';
 
 /**
  * Everything on the menu that is not poured.
@@ -839,6 +841,7 @@ function RoundContainer({
   lid: React.RefObject<THREE.Group | null>;
   paper: PbrSet;
 }) {
+  const lite = useQuality() !== 'high';
   return (
     <group>
       <mesh position={[0, 0.35, 0]}>
@@ -855,7 +858,9 @@ function RoundContainer({
           <meshPhysicalMaterial
             color="#FFFFFF"
             roughness={0.06}
-            transmission={0.9}
+            transmission={lite ? 0 : 0.9}
+            transparent={lite}
+            opacity={lite ? 0.3 : 1}
             thickness={0.06}
             ior={1.46}
           />
@@ -954,7 +959,8 @@ function Served({
   }, [replay]);
 
   useFrame((_, delta) => {
-    t.current = Math.min(TOTAL, t.current + delta);
+    // Capped for the same reason as the cup: waking up must not skip the serve.
+    t.current = Math.min(TOTAL, t.current + Math.min(delta, 0.05));
     const time = t.current;
     const land = easeOut(seg(time, 0, LAND_END));
     const drop = seg(time, DROP[0], DROP[1]);
@@ -1018,31 +1024,48 @@ export default function FoodScene({
   replay?: number;
   onComplete?: () => void;
 }) {
+  const detected = useDeviceQuality();
+  const quality: Quality = detected === 'low' ? 'mid' : detected;
+  const lite = quality !== 'high';
+  const { ref, frameloop, markDone } = useSceneLoop(kind, name, togo, replay);
+  const done = useRef(onComplete);
+  done.current = onComplete;
+  const handleComplete = useCallback(() => {
+    markDone();
+    done.current?.();
+  }, [markDone]);
+
   return (
-    <Canvas
-      dpr={1}
-      camera={{ position: [0, 2.7, 6.6], fov: 28 }}
-      gl={{ antialias: true, toneMappingExposure: 1.0 }}
-      onCreated={({ camera }) => camera.lookAt(0, -0.35, 0)}
-      aria-hidden="true"
-    >
-      <Suspense fallback={null}>
-        <CafeEnv />
-      </Suspense>
-      <ambientLight intensity={0.3} color="#F2F6F8" />
-      <directionalLight position={[3.6, 6, 4]} intensity={2.1} color="#FFF8F0" />
-      <directionalLight position={[-4.5, 2, -3]} intensity={0.6} color="#BFD8FF" />
-      <Counter />
-      <Served kind={kind} name={name} togo={togo} replay={replay} onComplete={onComplete} />
-      <ContactShadows
-        position={[0, -1.018, 0]}
-        opacity={0.55}
-        scale={6}
-        blur={1.6}
-        far={2}
-        resolution={512}
-        color="#3A342C"
-      />
-    </Canvas>
+    <div ref={ref} className="h-full w-full">
+      <Canvas
+        dpr={lite ? 1 : [1, 1.5]}
+        frameloop={frameloop}
+        camera={{ position: [0, 2.7, 6.6], fov: 28 }}
+        gl={{ antialias: true, toneMappingExposure: 1.0 }}
+        onCreated={({ camera }) => camera.lookAt(0, -0.35, 0)}
+        aria-hidden="true"
+      >
+        <QualityContext.Provider value={quality}>
+          {lite && <color attach="background" args={['#E9E2D6']} />}
+          <Suspense fallback={null}>
+            <CafeEnv />
+          </Suspense>
+          <ambientLight intensity={0.3} color="#F2F6F8" />
+          <directionalLight position={[3.6, 6, 4]} intensity={2.1} color="#FFF8F0" />
+          <directionalLight position={[-4.5, 2, -3]} intensity={0.6} color="#BFD8FF" />
+          <Counter />
+          <Served kind={kind} name={name} togo={togo} replay={replay} onComplete={handleComplete} />
+          <ContactShadows
+            position={[0, -1.018, 0]}
+            opacity={0.55}
+            scale={6}
+            blur={1.6}
+            far={2}
+            resolution={lite ? 256 : 512}
+            color="#3A342C"
+          />
+        </QualityContext.Provider>
+      </Canvas>
+    </div>
   );
 }
