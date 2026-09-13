@@ -4,10 +4,13 @@ import { useEffect, useMemo, useState } from 'react';
 import { recipePrice, recipeScene, type Recipe } from '@/lib/recipes';
 import { useWebglStage } from '@/hooks/use-webgl-stage';
 import { useBestSellers, useLiveRecipes } from '@/hooks/use-recipes';
-import { productImage } from '@/lib/images';
 import { usePriceBook } from '@/lib/price-book';
-// The 3D here is decoration: a photo on low-power devices.
-import { AdaptiveCup } from '@/components/features/builder/serve-poster';
+import dynamic from 'next/dynamic';
+
+// The menu as an animated poster. Always 3D, lighter on modest devices.
+const DrinkPoster = dynamic(() => import('@/components/features/builder/drink-poster'), {
+  ssr: false,
+});
 
 type Tab = 'signature' | 'seasonal' | 'popular';
 
@@ -37,7 +40,16 @@ export function SeasonalShowcase() {
   const list: Listed[] =
     tab === 'signature' ? signatures : tab === 'seasonal' ? seasonals : bestSellers;
   const drink = list[Math.min(index, list.length - 1)];
-  const scene = useMemo(() => (drink ? recipeScene(drink) : null), [drink]);
+  // Two more drinks from the same list float behind the chosen one.
+  const companions = useMemo(
+    () =>
+      list.length > 1
+        ? [1, 2]
+            .map((k) => list[(Math.min(index, list.length - 1) + k) % list.length])
+            .filter((d) => d && d.id !== drink?.id)
+        : [],
+    [list, index, drink],
+  );
 
   useEffect(() => {
     const mq = window.matchMedia('(prefers-reduced-motion: reduce)');
@@ -94,20 +106,43 @@ export function SeasonalShowcase() {
         <div className="grid items-center gap-10 md:grid-cols-12 md:gap-8">
           {/* The pour */}
           <div ref={stage} className="relative md:col-span-6">
-            <div className="rule aspect-[4/3] w-full overflow-hidden bg-birch-100 shadow-hard-lg sm:aspect-square md:aspect-[4/5]">
-              {visible && scene ? (
-                <AdaptiveCup
-                  // Remounting on the drink replays the whole build.
-                  key={`${generation}-${drink.id}`}
-                  scene={scene}
-                  stage={4}
-                  animate={animate}
-                  poster={productImage({ name: drink.name })}
-                  posterAlt={drink.name}
-                />
-              ) : (
-                <div className="h-full w-full animate-pulse bg-birch-200" />
+            <div className="rule relative aspect-[4/5] w-full overflow-hidden bg-birch-50 shadow-hard-lg sm:aspect-square md:aspect-[4/5]">
+              {/* The café's colours, out of focus, like the bloom on the page. */}
+              <div
+                aria-hidden="true"
+                className="absolute inset-0"
+                style={{
+                  backgroundImage:
+                    'radial-gradient(60% 50% at 28% 30%, rgb(var(--acid) / 0.6), transparent 70%), radial-gradient(50% 45% at 78% 76%, rgb(var(--ember) / 0.35), transparent 70%)',
+                }}
+              />
+              {/* The drink's name, set large behind the floating cups. */}
+              {drink && (
+                <div className="pointer-events-none absolute inset-x-0 top-[30%] z-[1] px-5 text-center">
+                  <span className="font-seal text-[clamp(1.1rem,3.4vw,1.6rem)] italic text-stone2-900">
+                    <span className="marker">
+                      {drink.season ?? (drink.kind === 'seasonal' ? 'Seasonal' : 'Signature')}
+                    </span>
+                  </span>
+                  <p className="mt-2 break-words text-[clamp(2.4rem,10vw,5.2rem)] font-extrabold uppercase leading-[0.85] tracking-[-0.03em] text-stone2-900">
+                    {drink.name}
+                  </p>
+                </div>
               )}
+              {visible && drink && (
+                <div className="absolute inset-0 z-[2]">
+                  <DrinkPoster
+                    // A lost WebGL context remounts the scene from scratch.
+                    key={generation}
+                    focus={drink}
+                    companions={companions}
+                    animate={animate}
+                  />
+                </div>
+              )}
+              <span className="absolute right-3 top-3 z-[3] font-mono text-[10px] uppercase tracking-[0.2em] text-stone2-900/70">
+                Around the Bean
+              </span>
             </div>
 
             <div className="slab-acid pointer-events-none absolute -bottom-6 left-6 flex items-baseline gap-2.5 px-5 py-2.5">

@@ -3,11 +3,9 @@ import { FastifyAdapter, NestFastifyApplication } from '@nestjs/platform-fastify
 import { ValidationPipe } from '@nestjs/common';
 import fastifyCookie from '@fastify/cookie';
 import fastifyMultipart from '@fastify/multipart';
-import fastifyStatic from '@fastify/static';
-import { join } from 'node:path';
-import { mkdirSync } from 'node:fs';
 import { SwaggerModule, DocumentBuilder } from '@nestjs/swagger';
 import { AppModule } from './app.module';
+import { ImageService } from './modules/uploads/application/image.service';
 import { HttpExceptionFilter } from './common/filters/http-exception.filter';
 import { ResponseInterceptor } from './common/interceptors/response.interceptor';
 
@@ -41,34 +39,28 @@ async function bootstrap() {
    * inmutable un año: el navegador no vuelve a pedirla nunca, y si la
    * foto cambia, cambia la URL. Es lo que hace un CDN, sin contratar uno.
    */
-  // Photos are served from every folder they may have been written to: the
-  // configured one (a Railway volume) and the app's own uploads folder, where
-  // anything saved before UPLOADS_DIR existed still lives. The same image URL
-  // then works wherever the file ended up.
-  const roots = [
-    ...new Set([process.env.UPLOADS_DIR, join(process.cwd(), 'uploads')].filter(Boolean)),
-  ] as string[];
-  for (const dir of roots) mkdirSync(dir, { recursive: true });
-  console.log(`Serving uploads from: ${roots.join(', ')}`);
-  await app.register(fastifyStatic as any, {
-    root: roots,
-    prefix: '/uploads/',
-    // The counter app and the website live on other domains. An <img> does
-    // not need CORS, but these headers let a photo be used from any page,
-    // including by canvas or fetch, and under stricter isolation policies.
-    // @fastify/static hands over the Fastify reply here, not a raw response.
-    setHeaders: (reply: { header: (name: string, value: string) => unknown }) => {
-      reply.header('Access-Control-Allow-Origin', '*');
-      reply.header('Cross-Origin-Resource-Policy', 'cross-origin');
-    },
-    decorateReply: false,
-    cacheControl: true,
-    maxAge: '365d',
-    immutable: true,
-    index: false,
-    // Nada de listar carpetas: la URL se conoce o no se conoce.
-    list: false,
-  });
+  // Photos come from disk when the file is there and from the database
+  // otherwise, so an upload keeps working after a redeploy wipes the disk.
+  // Names come from the content, so a URL always returns the same bytes and
+  // can be cached for a year.
+  const images = app.get(ImageService);
+  app
+    .getHttpAdapter()
+    .getInstance()
+    .get('/uploads/:dir/:file', async (req: any, reply: any) => {
+      const { dir, file } = req.params as { dir: string; file: string };
+      const image = await images.read(`${dir}/${file}`);
+      if (!image) return reply.code(404).send({ message: 'Photo not found' });
+      return (
+        reply
+          .header('Content-Type', image.contentType)
+          .header('Cache-Control', 'public, max-age=31536000, immutable')
+          // The counter app and the website live on other domains.
+          .header('Access-Control-Allow-Origin', '*')
+          .header('Cross-Origin-Resource-Policy', 'cross-origin')
+          .send(image.data)
+      );
+    });
 
   app.setGlobalPrefix('api/v1');
   app.useGlobalPipes(new ValidationPipe({ whitelist: true, transform: true }));

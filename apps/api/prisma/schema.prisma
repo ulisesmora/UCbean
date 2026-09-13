@@ -656,3 +656,13 @@ model DrinkOptionPrice {
 
   @@id([group, optionId])
 }
+
+/// An uploaded photo, kept in the database so it survives redeploys and does
+/// not depend on a mounted disk. Served at /uploads/<path>.
+model StoredImage {
+  /// What follows /uploads/ in its URL, e.g. "ae/ae7da13f6eabe35f.webp".
+  path        String   @id
+  contentType String
+  data        Bytes
+  createdAt   DateTime @default(now())
+}

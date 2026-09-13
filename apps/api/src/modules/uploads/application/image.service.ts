@@ -1,8 +1,9 @@
-import { BadRequestException, Injectable, Logger } from '@nestjs/common';
+import { BadRequestException, Injectable, Logger, OnModuleInit } from '@nestjs/common';
 import { createHash } from 'node:crypto';
-import { mkdir, writeFile, access } from 'node:fs/promises';
+import { mkdir, writeFile, access, readFile, readdir } from 'node:fs/promises';
 import { join } from 'node:path';
 import type { Sharp } from 'sharp';
+import type { PrismaService } from '../../../prisma/prisma.service';
 
 /**
  * sharp, cargado a mano.
@@ -36,6 +37,9 @@ export const MAX_BYTES = 5 * 1024 * 1024;
 
 const TIPOS = ['image/jpeg', 'image/png', 'image/webp', 'image/avif', 'image/gif'];
 
+/** A stored photo's file name: a 16-character content hash, optionally the thumbnail. */
+const PHOTO_NAME = /^[a-f0-9]{16}(-sm)?\.webp$/;
+
 /**
  * Las fotos de producto, servidas por el propio backend.
  *
@@ -50,10 +54,86 @@ const TIPOS = ['image/jpeg', 'image/png', 'image/webp', 'image/avif', 'image/gif
  * aquí sale gratis.
  */
 @Injectable()
-export class ImageService {
+export class ImageService implements OnModuleInit {
   private readonly logger = new Logger(ImageService.name);
 
-  constructor(private readonly rootDir: string) {}
+  constructor(
+    /** Folders that may hold photos. Written to the first, read from all. */
+    private readonly roots: string[],
+    private readonly prisma: PrismaService,
+  ) {}
+
+  private get rootDir(): string {
+    return this.roots[0];
+  }
+
+  /**
+   * Photos already on disk go into the database too, once.
+   *
+   * Anything uploaded before photos were stored in the database, and still
+   * sitting in one of the upload folders, becomes servable from the database,
+   * so it keeps working after the next redeploy.
+   */
+  async onModuleInit() {
+    let imported = 0;
+    for (const root of this.roots) {
+      let dirs: string[] = [];
+      try {
+        dirs = (await readdir(root)).filter((d) => /^[a-f0-9]{2}$/.test(d));
+      } catch {
+        continue;
+      }
+      for (const dir of dirs) {
+        const files = (await readdir(join(root, dir)).catch(() => [] as string[])).filter((f) =>
+          PHOTO_NAME.test(f),
+        );
+        for (const file of files) {
+          const path = `${dir}/${file}`;
+          try {
+            const known = await this.prisma.storedImage.findUnique({
+              where: { path },
+              select: { path: true },
+            });
+            if (known) continue;
+            await this.store(path, await readFile(join(root, path)));
+            imported++;
+          } catch (e) {
+            this.logger.warn(`Could not import ${path}: ${(e as Error).message}`);
+          }
+        }
+      }
+    }
+    if (imported > 0) this.logger.log(`Imported ${imported} photos from disk into the database`);
+  }
+
+  /**
+   * One photo by its path after /uploads/. Disk first, database after.
+   * Undefined when it is in neither, or when the path is not a photo name.
+   */
+  async read(path: string): Promise<{ contentType: string; data: Buffer } | undefined> {
+    const [dir, file] = path.split('/');
+    if (!/^[a-f0-9]{2}$/.test(dir ?? '') || !PHOTO_NAME.test(file ?? '')) return undefined;
+
+    for (const root of this.roots) {
+      try {
+        return { contentType: 'image/webp', data: await readFile(join(root, dir, file)) };
+      } catch {
+        // Not in this folder.
+      }
+    }
+    const row = await this.prisma.storedImage.findUnique({ where: { path: `${dir}/${file}` } });
+    return row ? { contentType: row.contentType, data: Buffer.from(row.data) } : undefined;
+  }
+
+  private async store(path: string, data: Buffer) {
+    await this.prisma.storedImage.upsert({
+      where: { path },
+      update: {},
+      // Prisma takes bytes backed by a plain ArrayBuffer; a Node Buffer may sit on a
+      // shared pool, so it is copied into one.
+      create: { path, contentType: 'image/webp', data: new Uint8Array(data) },
+    });
+  }
 
   /**
    * Guarda una imagen ya optimizada y devuelve sus URLs.
@@ -119,6 +199,11 @@ export class ImageService {
           `(uploaded at ${Math.round(buffer.length / 1024)} KB)`,
       );
     }
+
+    // Kept in the database as well, so the photo survives a redeploy even
+    // when the server's disk does not.
+    await this.store(`${hash.slice(0, 2)}/${nombre}`, grande.data);
+    await this.store(`${hash.slice(0, 2)}/${nombreMini}`, mini);
 
     const base = `/uploads/${hash.slice(0, 2)}`;
     return {

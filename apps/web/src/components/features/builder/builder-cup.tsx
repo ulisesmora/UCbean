@@ -30,7 +30,7 @@ export function usePbr(make: () => PbrSet): PbrSet {
   return set;
 }
 
-type Scene = ReturnType<typeof sceneOf>;
+export type Scene = ReturnType<typeof sceneOf>;
 /** How far each of the five stages has played. Reaches 1 and holds there. */
 type Clock = MutableRefObject<number[]>;
 
@@ -1334,7 +1334,7 @@ function Handle() {
 
 /* ── The cup ─────────────────────────────────────────────── */
 
-function Cup({
+export function Cup({
   scene,
   stage,
   animate,
@@ -1522,15 +1522,21 @@ function Cup({
       <group ref={shell}>
         <mesh>
           <latheGeometry args={[profile, 64]} />
+          {/* Each kind of cup gets its own material, keyed. React would otherwise
+              reuse one material and only swap its props, and three.js does not
+              rebuild a shader when transparency, refraction or texture maps
+              change: switching to the mug or the clear cup drew nothing. */}
           {clear ? (
             <meshPhysicalMaterial
-              color="#FFFFFF"
+              key={lite ? 'clear-lite' : 'clear'}
+              color={lite ? '#EEF4F6' : '#FFFFFF'}
               // Real glass: nearly clear, refracting, with a faint green cast
               // in thickness the way soda-lime actually goes.
               roughness={0.02}
               transmission={lite ? 0 : 0.98}
               transparent={lite}
-              opacity={lite ? 0.24 : 1}
+              // Enough body to read as a cup against a flat backdrop.
+              opacity={lite ? 0.42 : 1}
               depthWrite={!lite}
               thickness={clearTogo ? 0.1 : 0.38}
               ior={clearTogo ? 1.46 : 1.52}
@@ -1543,6 +1549,7 @@ function Cup({
             />
           ) : togo ? (
             <meshPhysicalMaterial
+              key="paper"
               color="#F6F0E4"
               {...paperPbr}
               roughness={0.74}
@@ -1553,7 +1560,7 @@ function Cup({
               sheenColor="#FFE9C9"
             />
           ) : (
-            <meshPhysicalMaterial {...GLAZE} {...glazePbr} />
+            <meshPhysicalMaterial key="glaze" {...GLAZE} {...glazePbr} />
           )}
         </mesh>
       </group>
@@ -1681,7 +1688,7 @@ function Cup({
                     roughness={0.05}
                     transmission={lite ? 0 : 0.9}
                     transparent={lite}
-                    opacity={lite ? 0.3 : 1}
+                    opacity={lite ? 0.5 : 1}
                     thickness={0.05}
                     ior={1.46}
                   />
@@ -1796,7 +1803,7 @@ export function Counter() {
  * behind the cup. Shown blurred, so it reads as depth rather than competing
  * with the drink.
  */
-export function CafeEnv() {
+export function CafeEnv({ backdrop = true }: { backdrop?: boolean } = {}) {
   const lite = useQuality() !== 'high';
   // Suspense waits on the photograph, so the scene never renders half-lit.
   const photo = useLoader(THREE.ImageLoader, '/env/cafe-interior.webp');
@@ -1807,7 +1814,7 @@ export function CafeEnv() {
       map={map}
       // The blurred café behind the cup is a full-screen pass of its own.
       // Lighter tiers keep it for reflections only.
-      background={!lite}
+      background={backdrop && !lite}
       backgroundBlurriness={0.6}
       environmentIntensity={1.0}
     />
