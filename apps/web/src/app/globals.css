@@ -7,37 +7,37 @@
     color-scheme: light;
 
     /* Brand tokens */
-    --font-body:    'Plus Jakarta Sans', system-ui, sans-serif;
-    --font-display: 'Playfair Display',  Georgia,   serif;
-    --font-seal:    'Hahmlet',            Georgia,   serif;
-    --font-mono:    'JetBrains Mono',     ui-monospace, monospace;
+    --font-body: 'Plus Jakarta Sans', system-ui, sans-serif;
+    --font-display: 'Playfair Display', Georgia, serif;
+    --font-seal: 'Hahmlet', Georgia, serif;
+    --font-mono: 'JetBrains Mono', ui-monospace, monospace;
 
-    --ink:     #0A0A0A;
-    --acid:    169 194 63;   /* fill only — never type on white */
-    --ember:   255 90 24;
-    --paper:   #F7F7F4;
+    --ink: #0a0a0a;
+    --acid: 169 194 63; /* fill only — never type on white */
+    --ember: 255 90 24;
+    --paper: #f7f7f4;
 
     /* shadcn semantic tokens */
-    --background:        0 0% 100%;
-    --foreground:        0 0% 4%;
-    --card:              0 0% 100%;
-    --card-foreground:   0 0% 4%;
-    --popover:           0 0% 100%;
+    --background: 0 0% 100%;
+    --foreground: 0 0% 4%;
+    --card: 0 0% 100%;
+    --card-foreground: 0 0% 4%;
+    --popover: 0 0% 100%;
     --popover-foreground: 0 0% 4%;
-    --primary:           142 82% 55%;
+    --primary: 142 82% 55%;
     --primary-foreground: 0 0% 4%;
-    --secondary:         60 8% 95%;
+    --secondary: 60 8% 95%;
     --secondary-foreground: 0 0% 4%;
-    --muted:             60 8% 95%;
-    --muted-foreground:  60 3% 29%;
-    --accent:            17 100% 55%;
+    --muted: 60 8% 95%;
+    --muted-foreground: 60 3% 29%;
+    --accent: 17 100% 55%;
     --accent-foreground: 0 0% 4%;
-    --destructive:       17 100% 55%;
+    --destructive: 17 100% 55%;
     --destructive-foreground: 0 0% 100%;
-    --border:            0 0% 4%;
-    --input:             0 0% 4%;
-    --ring:              142 74% 26%;
-    --radius:            0rem;
+    --border: 0 0% 4%;
+    --input: 0 0% 4%;
+    --ring: 142 74% 26%;
+    --radius: 0rem;
   }
 
   html {
@@ -53,7 +53,9 @@
   }
 
   /* Brutalism sets type tight and heavy. */
-  h1, h2, h3 {
+  h1,
+  h2,
+  h3 {
     letter-spacing: -0.03em;
   }
 
@@ -67,17 +69,26 @@
     color: var(--ink);
   }
 
-  .pb-safe { padding-bottom: max(env(safe-area-inset-bottom), 0.5rem); }
+  .pb-safe {
+    padding-bottom: max(env(safe-area-inset-bottom), 0.5rem);
+  }
 }
 
 @layer utilities {
-  .tap-target { min-height: 44px; min-width: 44px; }
+  .tap-target {
+    min-height: 44px;
+    min-width: 44px;
+  }
 
   /* ── Structure ────────────────────────────────────────────
      The grid is drawn in ink and never apologises for it. */
 
-  .rule      { border: 2px solid var(--ink); }
-  .rule-thin { border: 1px solid var(--ink); }
+  .rule {
+    border: 2px solid var(--ink);
+  }
+  .rule-thin {
+    border: 1px solid var(--ink);
+  }
 
   /* Offset slab, for cards. The shadow is a solid shape, not a blur. */
   .slab {
@@ -86,7 +97,9 @@
     background: #ffffff;
     transition: background-color 160ms ease;
   }
-  .slab-hover:hover { background: var(--paper); }
+  .slab-hover:hover {
+    background: var(--paper);
+  }
 
   /* Same slab, filled. For stamps and badges, which are labels, not controls. */
   .slab-acid {
@@ -113,9 +126,10 @@
     font-weight: 600;
     letter-spacing: -0.006em;
     box-shadow: 4px 4px 0 0 var(--ink);
-    transition: transform 140ms cubic-bezier(0.2, 0.8, 0.3, 1),
-                box-shadow 140ms cubic-bezier(0.2, 0.8, 0.3, 1),
-                background-color 140ms ease;
+    transition:
+      transform 140ms cubic-bezier(0.2, 0.8, 0.3, 1),
+      box-shadow 140ms cubic-bezier(0.2, 0.8, 0.3, 1),
+      background-color 140ms ease;
   }
   .btn:hover {
     transform: translate(-2px, -2px);
@@ -128,14 +142,20 @@
     transition-duration: 80ms;
   }
 
-  .btn-acid { background: rgb(var(--acid)); }
-  .btn-acid:hover { background: #BCD455; }
+  .btn-acid {
+    background: rgb(var(--acid));
+  }
+  .btn-acid:hover {
+    background: #bcd455;
+  }
 
   .btn-ink {
     background: var(--ink);
     color: rgb(var(--acid));
   }
-  .btn-ink:hover { background: #1C1C1C; }
+  .btn-ink:hover {
+    background: #1c1c1c;
+  }
 
   /* Exposed grid, faint enough to read as paper rule. */
   .blueprint {
@@ -190,10 +210,9 @@
     box-shadow:
       /* lit top edge */
       inset 0 2px 0 rgba(255, 255, 255, 1),
-      /* light pooling down the inside face */
-      inset 0 14px 28px -14px rgba(255, 255, 255, 0.95),
-      /* the panel's own weight, caught under the bottom edge */
-      inset 0 -10px 22px -18px rgba(10, 10, 10, 0.45),
+      /* light pooling down the inside face */ inset 0 14px 28px -14px rgba(255, 255, 255, 0.95),
+      /* the panel's own weight, caught under the bottom edge */ inset 0 -10px 22px -18px
+        rgba(10, 10, 10, 0.45),
       0 14px 34px -26px rgba(10, 10, 10, 0.5);
     transition: background-color 240ms ease;
   }
@@ -251,11 +270,7 @@
         rgba(255, 255, 255, 0.72) 100%
       ),
       /* the bright rim where light enters the top-left corner */
-      radial-gradient(
-        120% 90% at 0% 0%,
-        rgba(255, 255, 255, 0.55),
-        transparent 46%
-      );
+        radial-gradient(120% 90% at 0% 0%, rgba(255, 255, 255, 0.55), transparent 46%);
   }
 
   /* One drifting stain fixed to the viewport, behind every page. Sections
@@ -275,7 +290,10 @@
   }
 
   /* Colour blooming up through the paper, out of focus. */
-  .bloom { position: relative; isolation: isolate; }
+  .bloom {
+    position: relative;
+    isolation: isolate;
+  }
   .bloom::before {
     content: '';
     position: absolute;
@@ -304,13 +322,21 @@
     gap: 3rem;
   }
   @keyframes ticker {
-    from { transform: translateX(0); }
-    to   { transform: translateX(-50%); }
+    from {
+      transform: translateX(0);
+    }
+    to {
+      transform: translateX(-50%);
+    }
   }
 }
 
 @supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
-  .glass-live, .glass-bar, .glass-panel { background-color: rgba(255, 255, 255, 0.92); }
+  .glass-live,
+  .glass-bar,
+  .glass-panel {
+    background-color: rgba(255, 255, 255, 0.92);
+  }
 }
 
 /* Phones and touch screens: the blooms hold still. A full-screen blurred layer
@@ -332,8 +358,12 @@
     animation: none !important;
   }
   .btn:hover,
-  .btn:active { transform: none; }
-  html { scroll-behavior: auto; }
+  .btn:active {
+    transform: none;
+  }
+  html {
+    scroll-behavior: auto;
+  }
 }
 
 /* A drink turning: one sprite sheet of 16 frames, stepped frame by frame. */
@@ -345,13 +375,158 @@
     drink-in 400ms ease-out;
 }
 @keyframes drink-spin {
-  from { background-position-x: 0%; }
-  to { background-position-x: 100%; }
+  from {
+    background-position-x: 0%;
+  }
+  to {
+    background-position-x: 100%;
+  }
 }
 @keyframes drink-in {
-  from { opacity: 0; }
-  to { opacity: 1; }
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
 }
 @media (prefers-reduced-motion: reduce) {
-  .drink-sprite { animation: none; }
+  .drink-sprite {
+    animation: none;
+  }
+}
+
+/* ── Install walk-through: a drawn phone acting out each step ──
+   Base styles are each scene's final frame, so reduced motion still shows
+   where to tap. The keyframes only add the way there. */
+.demo-tap {
+  position: absolute;
+  width: 34px;
+  height: 34px;
+  margin: -17px 0 0 -17px;
+  border: 3px solid #0a0a0a;
+  border-radius: 9999px;
+  background: rgba(169, 194, 63, 0.45);
+  pointer-events: none;
+  animation: demo-tap 2.8s ease-out infinite;
+}
+.demo-tap-late {
+  animation-name: demo-tap-late;
+  animation-duration: 3.4s;
+}
+.demo-hot {
+  animation: demo-hot 2.8s ease-in-out infinite;
+}
+.demo-sheet {
+  animation: demo-sheet 3.4s cubic-bezier(0.2, 0.8, 0.2, 1) infinite;
+}
+.demo-scroll {
+  transform: translateY(-38%);
+  animation: demo-scroll 3.4s ease-in-out infinite;
+}
+.demo-drop {
+  animation: demo-drop 3.4s cubic-bezier(0.2, 0.8, 0.2, 1) infinite;
+}
+.demo-pop {
+  animation: demo-pop 3.4s cubic-bezier(0.34, 1.56, 0.64, 1) infinite;
+}
+@keyframes demo-tap {
+  0%,
+  12% {
+    transform: scale(1.6);
+    opacity: 0;
+  }
+  30% {
+    transform: scale(1);
+    opacity: 1;
+  }
+  40% {
+    transform: scale(0.8);
+    opacity: 1;
+  }
+  75%,
+  100% {
+    transform: scale(1);
+    opacity: 0;
+  }
+}
+@keyframes demo-tap-late {
+  0%,
+  55% {
+    transform: scale(1.6);
+    opacity: 0;
+  }
+  70% {
+    transform: scale(1);
+    opacity: 1;
+  }
+  78% {
+    transform: scale(0.8);
+    opacity: 1;
+  }
+  95%,
+  100% {
+    transform: scale(1);
+    opacity: 0;
+  }
+}
+@keyframes demo-hot {
+  0%,
+  25% {
+    box-shadow: 0 0 0 0 rgba(169, 194, 63, 0);
+  }
+  40% {
+    box-shadow: 0 0 0 4px rgba(169, 194, 63, 0.6);
+  }
+  100% {
+    box-shadow: 0 0 0 0 rgba(169, 194, 63, 0);
+  }
+}
+@keyframes demo-sheet {
+  0%,
+  8% {
+    transform: translateY(100%);
+  }
+  28%,
+  100% {
+    transform: translateY(0);
+  }
+}
+@keyframes demo-scroll {
+  0%,
+  30% {
+    transform: translateY(0);
+  }
+  52%,
+  100% {
+    transform: translateY(-38%);
+  }
+}
+@keyframes demo-drop {
+  0%,
+  8% {
+    transform: scale(0.85);
+    opacity: 0;
+  }
+  25%,
+  100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+@keyframes demo-pop {
+  0%,
+  15% {
+    transform: scale(0);
+  }
+  35%,
+  100% {
+    transform: scale(1);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .phone-demo *,
+  .phone-demo *::before {
+    animation: none !important;
+  }
 }

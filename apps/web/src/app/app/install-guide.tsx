@@ -1,18 +1,15 @@
 'use client';
 
 import Link from 'next/link';
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import {
   ArrowDown,
+  ArrowRight,
   BellRing,
   Check,
   Copy,
   Download,
-  EllipsisVertical,
   Heart,
-  Plus,
-  Share,
-  Smartphone,
   Sparkles,
 } from 'lucide-react';
 import { toast } from 'sonner';
@@ -24,46 +21,56 @@ import {
   useInstallPrompt,
   type InstallContext,
 } from '@/lib/install';
+import { PhoneDemo, type DemoScene } from './phone-demo';
 
-type Step = { Icon: typeof Share; title: string; detail: string };
+type Step = { scene: DemoScene; title: string; detail: string };
 
 const OPEN_IT: Step = {
-  Icon: Smartphone,
-  title: 'Open it from your home screen',
-  detail: 'Around the Bean is there now, like any app. Open it and sign in once.',
+  scene: 'home',
+  title: 'Open Around the Bean',
+  detail: 'It is on your home screen now, like any app. Open it and sign in once.',
 };
+
+const ADD_AND_OPEN: Step[] = [
+  {
+    scene: 'ios-sheet',
+    title: 'Scroll down and tap Add to Home Screen',
+    detail: 'It is near the bottom of the list.',
+  },
+  { scene: 'ios-add', title: 'Tap Add', detail: 'In the top right corner.' },
+  OPEN_IT,
+];
 
 const STEPS: Partial<Record<InstallContext, Step[]>> = {
   'ios-safari': [
     {
-      Icon: Share,
-      title: 'Tap Share',
+      scene: 'ios-share-bottom',
+      title: 'Tap the Share button',
       detail:
-        "The square with an arrow in Safari's toolbar. On newer iPhones it can sit behind the ⋯ button.",
+        'The square with an arrow, at the bottom of Safari. On newer iPhones tap ⋯ first, then Share.',
     },
-    {
-      Icon: Plus,
-      title: 'Tap Add to Home Screen',
-      detail: "Scroll the menu down if you don't see it, then tap Add.",
-    },
-    OPEN_IT,
+    ...ADD_AND_OPEN,
   ],
   'ios-other': [
     {
-      Icon: Share,
-      title: 'Tap Share',
-      detail: 'The square with an arrow, next to the address bar.',
+      scene: 'ios-share-top',
+      title: 'Tap the Share button',
+      detail: 'The square with an arrow, at the top next to the address.',
     },
-    {
-      Icon: Plus,
-      title: 'Tap Add to Home Screen',
-      detail: "Scroll the menu down if you don't see it, then tap Add.",
-    },
-    OPEN_IT,
+    ...ADD_AND_OPEN,
   ],
   android: [
-    { Icon: EllipsisVertical, title: 'Tap the ⋮ menu', detail: 'Top right of your browser.' },
-    { Icon: Download, title: 'Tap Install app', detail: 'Some phones call it Add to Home screen.' },
+    {
+      scene: 'android-dots',
+      title: 'Tap the ⋮ button',
+      detail: 'The three dots in the top right corner.',
+    },
+    {
+      scene: 'android-menu',
+      title: 'Tap Install app',
+      detail: 'Some phones say Add to Home screen.',
+    },
+    { scene: 'android-install', title: 'Tap Install', detail: 'Your phone asks once to confirm.' },
     OPEN_IT,
   ],
 };
@@ -75,11 +82,137 @@ const PERKS = [
 ];
 
 /**
+ * One step at a time, big, with the gesture acted out.
+ *
+ * A list of three instructions loses people halfway: they switch to the Share
+ * menu, come back, and no longer know which line they were on. One screen per
+ * step, a phone showing where to tap, and a single big "next" button.
+ */
+function Stepper({ steps, arrow }: { steps: Step[]; arrow: boolean }) {
+  const [i, setI] = useState(0);
+  const [done, setDone] = useState(false);
+  const top = useRef<HTMLElement>(null);
+  const moved = useRef(false);
+
+  // Keep the step title in view after moving on, not the button just pressed.
+  useEffect(() => {
+    if (moved.current) top.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }, [i, done]);
+
+  const go = (next: number) => {
+    moved.current = true;
+    setI(next);
+  };
+  const finish = (value: boolean) => {
+    moved.current = true;
+    setDone(value);
+    if (!value) setI(0);
+  };
+
+  if (done) {
+    return (
+      <section
+        ref={top}
+        className="scroll-mt-20 rounded-[8px] border-2 border-stone2-900 bg-neon-500 p-6 shadow-[4px_4px_0_#0A0A0A]"
+      >
+        <span className="flex h-12 w-12 items-center justify-center rounded-full border-2 border-stone2-900 bg-birch-50">
+          <Check size={24} strokeWidth={3} />
+        </span>
+        <h2 className="mt-4 text-[28px] font-extrabold leading-[1.05] text-stone2-900">
+          That&apos;s it.
+        </h2>
+        <p className="mt-2 text-[16px] leading-relaxed text-stone2-900">
+          Open Around the Bean from your home screen. Sign in once and your usuals will be waiting.
+        </p>
+        <button
+          type="button"
+          onClick={() => finish(false)}
+          className="tap-target mt-4 text-[14px] font-semibold text-stone2-900 underline underline-offset-4"
+        >
+          Show the steps again
+        </button>
+      </section>
+    );
+  }
+
+  const step = steps[i];
+  const last = i === steps.length - 1;
+
+  return (
+    <section
+      ref={top}
+      aria-live="polite"
+      className="scroll-mt-20 rounded-[8px] border-2 border-stone2-900 bg-birch-50 p-5 shadow-[4px_4px_0_#0A0A0A]"
+    >
+      <div className="mb-4 flex items-center justify-between gap-3">
+        <p className="text-[13px] font-bold uppercase tracking-[0.14em] text-forest-700">
+          Step {i + 1} of {steps.length}
+        </p>
+        <div className="flex items-center gap-1.5" aria-hidden="true">
+          {steps.map((_, k) => (
+            <span
+              key={k}
+              className={`h-2.5 rounded-full border-2 border-stone2-900 transition-all duration-300 ${
+                k === i ? 'w-7 bg-neon-500' : k < i ? 'w-2.5 bg-stone2-900' : 'w-2.5 bg-birch-50'
+              }`}
+            />
+          ))}
+        </div>
+      </div>
+
+      <h2 className="text-balance text-[28px] font-extrabold leading-[1.05] text-stone2-900">
+        {step.title}
+      </h2>
+      <p className="mt-2 text-[16px] leading-relaxed text-stone2-600">{step.detail}</p>
+
+      <div className="my-6">
+        <PhoneDemo key={step.scene} scene={step.scene} />
+      </div>
+
+      <button
+        type="button"
+        onClick={() => (last ? finish(true) : go(i + 1))}
+        className="btn tap-target w-full justify-center py-4 text-[17px]"
+      >
+        {last ? "Done, it's on my home screen" : 'Done, next step'}
+        <ArrowRight size={18} />
+      </button>
+      {i > 0 && (
+        <button
+          type="button"
+          onClick={() => go(i - 1)}
+          className="tap-target mt-2 w-full py-2 text-[14px] font-semibold text-stone2-600 underline underline-offset-4"
+        >
+          Back
+        </button>
+      )}
+
+      {arrow && i === 0 && (
+        // Safari's Share button lives in the bottom toolbar on iPhone, below our own tab bar.
+        <div
+          aria-hidden="true"
+          className="pointer-events-none fixed inset-x-0 bottom-[calc(4.5rem+env(safe-area-inset-bottom))] z-[60] flex flex-col items-center gap-1 pb-safe md:hidden"
+        >
+          <span className="rounded-full border-2 border-stone2-900 bg-neon-500 px-3 py-1 text-[12px] font-bold text-stone2-900">
+            Share is in the toolbar below
+          </span>
+          <ArrowDown
+            size={26}
+            strokeWidth={3}
+            className="text-stone2-900 motion-safe:animate-bounce"
+          />
+        </div>
+      )}
+    </section>
+  );
+}
+
+/**
  * The page every QR code points to.
  *
  * It works out where the person is and shows only what applies there: one
- * button on Android, three steps on iPhone, "open this in your browser" inside
- * Instagram or TikTok, and nothing to do if the app is already installed.
+ * button on Android, a guided walk-through on iPhone, "open this in your
+ * browser" inside Instagram or TikTok, and nothing to do if already installed.
  */
 export function InstallGuide() {
   const event = useInstallPrompt((s) => s.event);
@@ -96,21 +229,25 @@ export function InstallGuide() {
   useEffect(() => setCtx(installed ? 'installed' : currentContext()), [event, installed]);
 
   return (
-    <div className="mx-auto max-w-md px-5 pb-40 pt-10 md:pt-16">
-      {/* eslint-disable-next-line @next/next/no-img-element -- static app icon */}
-      <img
-        src="/icons/icon-192.png"
-        alt=""
-        className="mb-5 h-[72px] w-[72px] rounded-[16px] border-2 border-stone2-900 shadow-[3px_3px_0_#0A0A0A]"
-      />
-      <p className="mb-2 text-[12px] uppercase tracking-[0.2em] text-forest-700">
-        Around the Bean app
-      </p>
-      <h1 className="text-balance text-[34px] font-extrabold leading-[1.02] text-stone2-900">
-        Your coffee, one tap from your home screen.
-      </h1>
+    <div className="mx-auto max-w-md px-5 pb-40 pt-8 md:pt-16">
+      <div className="mb-6 flex items-center gap-4">
+        {/* eslint-disable-next-line @next/next/no-img-element -- static app icon */}
+        <img
+          src="/icons/icon-192.png"
+          alt=""
+          className="h-[64px] w-[64px] shrink-0 rounded-[15px] border-2 border-stone2-900 shadow-[3px_3px_0_#0A0A0A]"
+        />
+        <div>
+          <p className="text-[12px] uppercase tracking-[0.2em] text-forest-700">
+            Around the Bean app
+          </p>
+          <h1 className="text-balance text-[28px] font-extrabold leading-[1.02] text-stone2-900">
+            Your coffee, one tap away.
+          </h1>
+        </div>
+      </div>
 
-      <ul className="mb-8 mt-5 flex flex-col gap-2.5">
+      <ul className="mb-7 flex flex-col gap-2.5">
         {PERKS.map(({ Icon, text }) => (
           <li key={text} className="flex items-center gap-3 text-[15px] text-stone2-900">
             <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-[8px] border-2 border-stone2-900 bg-neon-500">
@@ -143,43 +280,26 @@ export function InstallGuide() {
               if (await promptInstall())
                 toast.success('Installed. Open Around the Bean from your home screen.');
             }}
-            className="btn tap-target w-full justify-center py-3.5 text-[16px]"
+            className="btn tap-target w-full justify-center py-4 text-[17px]"
           >
-            <Download size={17} />
+            <Download size={18} />
             Install Around the Bean
           </button>
           <p className="mt-3 text-center text-[13px] text-stone2-600">
-            Free, no app store, under 1 MB.
+            Free, no app store. Your phone asks once to confirm.
           </p>
         </section>
       )}
 
-      {ctx && STEPS[ctx] && (
-        <ol className="flex flex-col gap-3">
-          {STEPS[ctx]!.map(({ Icon, title, detail }, i) => (
-            <li key={title} className="glass glass-edge flex items-start gap-3 p-4">
-              <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full border-2 border-stone2-900 bg-birch-50 text-[15px] font-extrabold tabular-nums">
-                {i + 1}
-              </span>
-              <div className="min-w-0 flex-1">
-                <p className="flex items-center gap-2 text-[16px] font-bold text-stone2-900">
-                  {title}
-                  <Icon size={17} strokeWidth={2.2} className="shrink-0" />
-                </p>
-                <p className="mt-0.5 text-[13.5px] leading-relaxed text-stone2-600">{detail}</p>
-              </div>
-            </li>
-          ))}
-        </ol>
-      )}
+      {ctx && STEPS[ctx] && <Stepper steps={STEPS[ctx]!} arrow={ctx === 'ios-safari' && iphone} />}
 
       {ctx === 'in-app' && (
         <section className="flex flex-col gap-3">
-          <div className="glass glass-edge p-4">
-            <p className="text-[16px] font-bold text-stone2-900">
+          <div className="rounded-[8px] border-2 border-stone2-900 bg-birch-50 p-5 shadow-[4px_4px_0_#0A0A0A]">
+            <h2 className="text-[24px] font-extrabold leading-[1.05] text-stone2-900">
               Open this page in your browser first
-            </p>
-            <p className="mt-1 text-[13.5px] leading-relaxed text-stone2-600">
+            </h2>
+            <p className="mt-2 text-[15px] leading-relaxed text-stone2-600">
               Instagram, TikTok and similar apps open links in their own browser, which cannot add
               apps to your home screen. Tap ⋯ and choose Open in browser, or copy the link.
             </p>
@@ -187,7 +307,7 @@ export function InstallGuide() {
           {android && (
             <a
               href={`intent://${typeof location === 'undefined' ? '' : location.host + location.pathname + location.search}#Intent;scheme=https;package=com.android.chrome;end`}
-              className="btn tap-target justify-center py-3 text-[15px]"
+              className="btn tap-target justify-center py-4 text-[16px]"
             >
               Open in Chrome
             </a>
@@ -202,9 +322,9 @@ export function InstallGuide() {
                 )
                 .catch(() => toast.error('Could not copy. Tap ⋯ and Open in browser instead.'))
             }
-            className="btn tap-target justify-center py-3 text-[15px]"
+            className="btn tap-target justify-center py-4 text-[16px]"
           >
-            <Copy size={16} />
+            <Copy size={17} />
             Copy link
           </button>
         </section>
@@ -222,21 +342,10 @@ export function InstallGuide() {
         </div>
       )}
 
-      {ctx === 'ios-safari' && iphone && (
-        // Safari's Share button lives in the bottom toolbar on iPhone.
-        <div
-          aria-hidden="true"
-          className="pointer-events-none fixed inset-x-0 bottom-3 z-50 flex flex-col items-center gap-1 pb-safe md:hidden"
-        >
-          <span className="rounded-full border-2 border-stone2-900 bg-neon-500 px-3 py-1 text-[12px] font-bold text-stone2-900">
-            Share is in the toolbar below
-          </span>
-          <ArrowDown
-            size={26}
-            strokeWidth={3}
-            className="text-stone2-900 motion-safe:animate-bounce"
-          />
-        </div>
+      {ctx && ctx !== 'installed' && ctx !== 'desktop' && (
+        <p className="mt-6 text-center text-[14px] leading-relaxed text-stone2-600">
+          Stuck? Ask us at the counter and we&apos;ll set it up with you.
+        </p>
       )}
     </div>
   );

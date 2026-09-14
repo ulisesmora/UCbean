@@ -223,6 +223,9 @@ export function AppQrPage() {
           <p className="mt-1 text-[13px] text-stone2-600">
             Add it to your home screen. +50 points the first time you open it.
           </p>
+          <p className="mt-3 rounded-full border-2 border-stone2-900 px-3 py-1 text-[12.5px] font-semibold text-stone2-900">
+            Need a hand? Ask us at the counter.
+          </p>
         </div>
       </div>
     </>
