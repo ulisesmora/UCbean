@@ -4,6 +4,21 @@ const VAPID = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY;
 
 export type PushState = 'unsupported' | 'default' | 'granted' | 'denied';
 
+/** Whether this build has the key notifications need. */
+export const pushConfigured = Boolean(VAPID);
+
+/** iPhone and iPad only deliver web push to a site added to the Home Screen. */
+export function needsHomeScreen(): boolean {
+  if (typeof window === 'undefined') return false;
+  const ios =
+    /iPad|iPhone|iPod/.test(navigator.userAgent) ||
+    (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+  const installed =
+    window.matchMedia('(display-mode: standalone)').matches ||
+    (navigator as Navigator & { standalone?: boolean }).standalone === true;
+  return ios && !installed;
+}
+
 /**
  * Si este navegador puede recibir avisos, y si ya dio permiso.
  *

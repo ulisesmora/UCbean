@@ -13,6 +13,7 @@ import { PrismaService } from '../../../../prisma/prisma.service';
 import { JwtPayloadVo } from '../../domain/value-objects/jwt-payload.vo';
 import { Role } from '../../../users/domain/value-objects/role.enum';
 import { EVENTS, type UserRegisteredEvent } from '../../../../common/events/domain-events';
+import { sessionTtlSeconds } from '../../domain/value-objects/session-ttl';
 
 /** Lo que Google devuelve de la persona. Solo se pide lo que se usa. */
 interface GoogleProfile {
@@ -212,8 +213,8 @@ export class GoogleAuthUseCase {
     }
 
     const payload: JwtPayloadVo = { sub: user.id, email: user.email, role: user.role as Role };
-    const accessToken = this.jwt.sign(payload);
-    const refreshToken = this.jwt.sign(payload, { expiresIn: '7d' });
+    const accessToken = this.jwt.sign(payload, { expiresIn: sessionTtlSeconds(payload.role) });
+    const refreshToken = this.jwt.sign(payload, { expiresIn: sessionTtlSeconds(payload.role) });
 
     await this.prisma.user.update({
       where: { id: user.id },

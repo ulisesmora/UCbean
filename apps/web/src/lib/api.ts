@@ -103,6 +103,17 @@ async function request<T>(path: string, init?: RequestInit, reintento = false): 
       if (token) return request<T>(path, conToken(init, token), true);
     }
 
+    // Still 401 with a token: it expired or was revoked and nothing renewed
+    // it. Sign out here, once, instead of leaving a signed-in page that fails.
+    if (res.status === 401 && llevaBearer && path !== '/auth/logout') {
+      const { useAuthStore } = await import('@/stores/auth.store');
+      if (useAuthStore.getState().isAuthenticated) {
+        useAuthStore.getState().clearAuth();
+        const { toast } = await import('sonner');
+        toast.info('Your session expired. Sign in again.');
+      }
+    }
+
     const body = await res.json().catch(() => ({}));
     // El error lleva su código. Sin él, quien lo recibe no puede distinguir
     // un «ese pedido no es tuyo», que no se arregla reintentando, de un

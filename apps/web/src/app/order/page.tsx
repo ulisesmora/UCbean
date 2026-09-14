@@ -7,6 +7,7 @@ import { ArrowRight, Coffee, Heart, History, Plus, RotateCcw } from 'lucide-reac
 import { toast } from 'sonner';
 import { favoritesApi, ordersApi } from '@/lib/api';
 import { productImage } from '@/lib/images';
+import { PushPrompt } from '@/components/features/notifications/push-prompt';
 import { DrinkThumb } from '@/components/features/builder/drink-thumb';
 import { usualsFrom, type Usual } from '@/lib/usuals';
 import type { Build } from '@/lib/builder';
@@ -165,6 +166,8 @@ export default function OrderHubPage() {
               : 'Your first order starts here. Next time, it will be waiting on this page.'}
         </p>
       </header>
+
+      <PushPrompt className="mb-6" />
 
       {inProgress && (
         <div className="mb-6">

@@ -18,6 +18,7 @@ import { RepeatSheet } from '@/components/features/menu/customise-sheet';
 import type { Build } from '@/lib/builder';
 import type { FavoriteDrink } from '@/types/api.types';
 import { productImage } from '@/lib/images';
+import { PushPrompt } from '@/components/features/notifications/push-prompt';
 import { DrinkThumb } from '@/components/features/builder/drink-thumb';
 import { shareDrink } from '@/lib/share';
 import { useProducts } from '@/hooks/use-products';
@@ -117,6 +118,7 @@ export default function ProfilePage() {
 
       <LoyaltySummary className="mb-10" />
 
+      <PushPrompt className="mb-10" />
       <Usuals />
 
       {/* Orders */}

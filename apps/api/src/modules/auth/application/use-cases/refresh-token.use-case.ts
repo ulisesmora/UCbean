@@ -1,8 +1,12 @@
 import { Inject, Injectable, UnauthorizedException } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import * as bcrypt from 'bcryptjs';
-import { IUserRepository, USER_REPOSITORY } from '../../../users/domain/repositories/user.repository.interface';
+import {
+  IUserRepository,
+  USER_REPOSITORY,
+} from '../../../users/domain/repositories/user.repository.interface';
 import { JwtPayloadVo } from '../../domain/value-objects/jwt-payload.vo';
+import { sessionTtlSeconds } from '../../domain/value-objects/session-ttl';
 
 @Injectable()
 export class RefreshTokenUseCase {
@@ -27,9 +31,9 @@ export class RefreshTokenUseCase {
     if (!user) throw new UnauthorizedException();
 
     const payload: JwtPayloadVo = { sub: user.id, email: user.email, role: user.role };
-    const accessToken = this.jwt.sign(payload);
+    const accessToken = this.jwt.sign(payload, { expiresIn: sessionTtlSeconds(payload.role) });
     // Rotate refresh token on every use
-    const newRefreshToken = this.jwt.sign(payload, { expiresIn: '7d' });
+    const newRefreshToken = this.jwt.sign(payload, { expiresIn: sessionTtlSeconds(payload.role) });
     const newHash = await bcrypt.hash(newRefreshToken, 10);
     await this.users.updateRefreshToken(user.id, newHash);
 

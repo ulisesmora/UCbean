@@ -3,6 +3,7 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import type { User } from '@/types/api.types';
+import { isTokenExpired } from '@/lib/jwt';
 
 interface AuthState {
   user: User | null;
@@ -35,6 +36,10 @@ export const useAuthStore = create<AuthState>()(
         user: state.user,
         isAuthenticated: state.isAuthenticated,
       }),
+      // A session saved last month must not come back as signed in.
+      onRehydrateStorage: () => (state) => {
+        if (state?.accessToken && isTokenExpired(state.accessToken)) state.clearAuth();
+      },
     },
   ),
 );

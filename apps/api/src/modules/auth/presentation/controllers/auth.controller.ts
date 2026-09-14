@@ -37,7 +37,8 @@ const cookieOpts = (secure: boolean) => ({
   // requires the secure flag that production already sets.
   sameSite: (process.env.COOKIE_SAMESITE ?? 'strict') as 'strict' | 'lax' | 'none',
   path: '/api/v1/auth',
-  maxAge: 7 * 24 * 3600,
+  // The longest session (a customer's month). A staff token expires sooner on its own.
+  maxAge: 30 * 24 * 3600,
 });
 
 @ApiTags('Auth')

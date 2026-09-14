@@ -11,7 +11,7 @@ import { useAuthStore } from '@/stores/auth.store';
 import { useSaveFavorite } from '@/hooks/use-favorites';
 import { sceneOf, DEFAULT_BUILD, type Build } from '@/lib/builder';
 import { useWebglStage } from '@/hooks/use-webgl-stage';
-import { pushState, subscribePush, type PushState } from '@/lib/push';
+import { needsHomeScreen, pushState, subscribePush, type PushState } from '@/lib/push';
 import type { Order } from '@/types/api.types';
 import { toast } from 'sonner';
 
@@ -400,7 +400,15 @@ function NotifyMe() {
 
   useEffect(() => setEstado(pushState()), []);
 
-  if (estado === 'unsupported') return null;
+  if (estado === 'unsupported') {
+    // On an iPhone the button cannot work until the site is on the Home Screen: say so.
+    return needsHomeScreen() ? (
+      <p className="mb-6 text-[13px] leading-relaxed text-stone2-600">
+        To get notified on iPhone, tap Share, then Add to Home Screen, and open Around the Bean from
+        there.
+      </p>
+    ) : null;
+  }
 
   if (estado === 'granted') {
     return (

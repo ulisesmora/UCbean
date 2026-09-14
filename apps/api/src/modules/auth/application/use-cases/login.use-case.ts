@@ -1,8 +1,12 @@
 import { Inject, Injectable, UnauthorizedException } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import * as bcrypt from 'bcryptjs';
-import { IUserRepository, USER_REPOSITORY } from '../../../users/domain/repositories/user.repository.interface';
+import {
+  IUserRepository,
+  USER_REPOSITORY,
+} from '../../../users/domain/repositories/user.repository.interface';
 import { JwtPayloadVo } from '../../domain/value-objects/jwt-payload.vo';
+import { sessionTtlSeconds } from '../../domain/value-objects/session-ttl';
 
 export interface LoginInput {
   email: string;
@@ -24,8 +28,8 @@ export class LoginUseCase {
     if (!valid) throw new UnauthorizedException('Invalid credentials');
 
     const payload: JwtPayloadVo = { sub: record.id, email: record.email, role: record.role };
-    const accessToken = this.jwt.sign(payload);
-    const refreshToken = this.jwt.sign(payload, { expiresIn: '7d' });
+    const accessToken = this.jwt.sign(payload, { expiresIn: sessionTtlSeconds(payload.role) });
+    const refreshToken = this.jwt.sign(payload, { expiresIn: sessionTtlSeconds(payload.role) });
     const refreshHash = await bcrypt.hash(refreshToken, 10);
     await this.users.updateRefreshToken(record.id, refreshHash);
 

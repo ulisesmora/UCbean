@@ -54,7 +54,7 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
   });
 
   if (res.status === 401) {
-    // El token de acceso dura quince minutos. Cuando vence, la sesión se
+    // El token de acceso dura un día. Cuando vence, la sesión se
     // cierra aquí en vez de dejar la pantalla llena de errores que el
     // personal no sabe interpretar.
     useAuth.getState().logout();

@@ -1,6 +1,7 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import { useShallow } from 'zustand/react/shallow';
+import { isTokenExpired } from '@/lib/jwt';
 
 /**
  * Quién está detrás de la barra.
@@ -39,7 +40,13 @@ export const useAuth = create<AuthState>()(
       setSession: (token, user) => set({ token, user }),
       logout: () => set({ token: null, user: null }),
     }),
-    { name: 'ucbean-crm-session' },
+    {
+      name: 'ucbean-crm-session',
+      // An expired session opens on the sign-in page, not on screens that fail.
+      onRehydrateStorage: () => (state) => {
+        if (state?.token && isTokenExpired(state.token)) state.logout();
+      },
+    },
   ),
 );
 

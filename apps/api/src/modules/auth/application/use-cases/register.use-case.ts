@@ -8,6 +8,7 @@ import {
 } from '../../../users/domain/repositories/user.repository.interface';
 import { JwtPayloadVo } from '../../domain/value-objects/jwt-payload.vo';
 import { EVENTS, type UserRegisteredEvent } from '../../../../common/events/domain-events';
+import { sessionTtlSeconds } from '../../domain/value-objects/session-ttl';
 
 export interface RegisterInput {
   email: string;
@@ -37,8 +38,8 @@ export class RegisterUseCase {
     });
 
     const payload: JwtPayloadVo = { sub: user.id, email: user.email, role: user.role };
-    const accessToken = this.jwt.sign(payload);
-    const refreshToken = this.jwt.sign(payload, { expiresIn: '7d' });
+    const accessToken = this.jwt.sign(payload, { expiresIn: sessionTtlSeconds(payload.role) });
+    const refreshToken = this.jwt.sign(payload, { expiresIn: sessionTtlSeconds(payload.role) });
     const refreshHash = await bcrypt.hash(refreshToken, 10);
     await this.users.updateRefreshToken(user.id, refreshHash);
 
