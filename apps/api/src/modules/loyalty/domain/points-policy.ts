@@ -15,6 +15,9 @@ export const SIGNUP_POINTS = 50;
 /** Lo que se regala el día del cumpleaños. */
 export const BIRTHDAY_POINTS = 100;
 
+/** Once per person, the first time they open the app from the home screen. */
+export const APP_INSTALL_POINTS = 50;
+
 /** Un sello por pedido, como la tarjeta de cartón de toda la vida. */
 export const STAMPS_PER_ORDER = 1;
 

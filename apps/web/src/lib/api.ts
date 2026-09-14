@@ -207,6 +207,12 @@ export const loyaltyApi = {
       {},
       { headers: { Authorization: `Bearer ${token}` } },
     ),
+  appInstall: (token: string, source: string) =>
+    api.post<{ awarded: number; balance: number }>(
+      '/loyalty/app-install',
+      { source },
+      { headers: { Authorization: `Bearer ${token}` } },
+    ),
 };
 
 export const discountsApi = {

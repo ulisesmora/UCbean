@@ -2,9 +2,15 @@ import { esDuplicado } from '../../../../prisma/transaction';
 import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
 import { randomBytes } from 'node:crypto';
 import { PrismaService } from '../../../../prisma/prisma.service';
-import { canAfford, pointsForOrder, STAMPS_PER_ORDER } from '../../domain/points-policy';
+import {
+  APP_INSTALL_POINTS,
+  canAfford,
+  pointsForOrder,
+  STAMPS_PER_ORDER,
+} from '../../domain/points-policy';
 
-export type PointsReason = 'ORDER' | 'SIGNUP' | 'BIRTHDAY' | 'REDEMPTION' | 'MANUAL' | 'EXPIRY';
+export type PointsReason =
+  'ORDER' | 'SIGNUP' | 'BIRTHDAY' | 'REDEMPTION' | 'MANUAL' | 'EXPIRY' | 'APP_INSTALL';
 
 /**
  * La tarjeta de lealtad.
@@ -54,6 +60,40 @@ export class LoyaltyService {
       if (!esDuplicado(e)) throw e;
     }
     return this.balanceOf(userId);
+  }
+
+  /**
+   * The points for opening the app from the home screen, once per person.
+   *
+   * The note keeps where the install came from (the QR placement), which is
+   * what the counter's QR page counts.
+   */
+  // ponytail: trusts the browser's word that the app is installed, there is no proof to check; the ceiling is 50 points once per account.
+  async rewardAppInstall(
+    userId: string,
+    source?: string,
+  ): Promise<{ awarded: number; balance: number }> {
+    const card = await this.cardFor(userId);
+    const already = await this.prisma.pointsEntry.findFirst({
+      where: { cardId: card.id, reason: 'APP_INSTALL' },
+    });
+    if (already) return { awarded: 0, balance: await this.balanceOf(userId) };
+    const balance = await this.addPoints(userId, APP_INSTALL_POINTS, 'APP_INSTALL', {
+      note: source || 'direct',
+    });
+    return { awarded: APP_INSTALL_POINTS, balance };
+  }
+
+  /** Installs per QR placement, most first. */
+  async appInstallsBySource(): Promise<{ source: string; installs: number }[]> {
+    const rows = await this.prisma.pointsEntry.groupBy({
+      by: ['note'],
+      where: { reason: 'APP_INSTALL' },
+      _count: { _all: true },
+    });
+    return rows
+      .map((r) => ({ source: r.note ?? 'direct', installs: r._count._all }))
+      .sort((a, b) => b.installs - a.installs);
   }
 
   /** Lo que deja un pedido: puntos y un sello. */

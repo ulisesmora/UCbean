@@ -14,6 +14,7 @@ import {
   TrendingUp,
   Wallet,
   Tags,
+  QrCode,
 } from 'lucide-react';
 import { useIdentity, useIsOwner, useLogout } from '@/stores/auth';
 import { useSidebar } from '@/stores/ui';
@@ -31,6 +32,7 @@ const NAV = [
   { to: '/caja', label: 'Cash', icon: Wallet },
   { to: '/ventas', label: 'Sales', icon: TrendingUp, ownerOnly: true },
   { to: '/campanas', label: 'Campaigns', icon: Megaphone, ownerOnly: true },
+  { to: '/qr', label: 'App QR', icon: QrCode },
   { to: '/equipo', label: 'Team', icon: UsersRound, ownerOnly: true },
 ];
 

@@ -364,6 +364,8 @@ enum PointsReason {
   REDEMPTION
   MANUAL
   EXPIRY
+  /// Una vez por persona, al abrir la web instalada en la pantalla de inicio.
+  APP_INSTALL
 }
 
 enum RedemptionStatus {

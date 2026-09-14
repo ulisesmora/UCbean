@@ -1,4 +1,4 @@
-import { IsInt, IsOptional, IsString, IsUUID, MaxLength, Min } from 'class-validator';
+import { IsInt, IsOptional, IsString, IsUUID, MaxLength, Min, Matches } from 'class-validator';
 import { Type } from 'class-transformer';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 
@@ -40,4 +40,13 @@ export class GrantPointsDto {
   @IsString()
   @MaxLength(200)
   note: string;
+}
+
+export class AppInstallDto {
+  /** The QR placement that brought the person in, e.g. `qr-counter`. */
+  @IsOptional()
+  @IsString()
+  @MaxLength(40)
+  @Matches(/^[a-z0-9-]+$/i)
+  source?: string;
 }

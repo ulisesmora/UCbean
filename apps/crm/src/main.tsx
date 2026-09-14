@@ -17,6 +17,7 @@ import { ProductsPage } from '@/pages/products';
 import { TeamPage } from '@/pages/team';
 import { CashPage } from '@/pages/cash';
 import { SalesPage } from '@/pages/sales';
+import { AppQrPage } from '@/pages/app-qr';
 import { isStaff, useToken, useUser } from '@/stores/auth';
 import './index.css';
 
@@ -75,6 +76,7 @@ createRoot(document.getElementById('root')!).render(
             <Route path="mesas" element={<TablesPage />} />
             <Route path="lealtad" element={<LoyaltyPage />} />
             <Route path="campanas" element={<CampaignsPage />} />
+            <Route path="qr" element={<AppQrPage />} />
           </Route>
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>

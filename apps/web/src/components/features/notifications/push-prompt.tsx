@@ -1,5 +1,6 @@
 'use client';
 
+import Link from 'next/link';
 import { useEffect, useState } from 'react';
 import { Bell, BellOff, Loader2, Share, X } from 'lucide-react';
 import { toast } from 'sonner';
@@ -109,6 +110,11 @@ export function PushPrompt({ className = '' }: { className?: string }) {
       <div className="min-w-0 flex-1">
         <p className="text-[15px] font-bold leading-tight text-stone2-900">{copy.title}</p>
         <p className="mt-1 text-[13px] leading-relaxed text-stone2-600">{copy.body}</p>
+        {view === 'install' && (
+          <Link href="/app?src=push-card" className="btn tap-target mt-3 px-5 py-2 text-[14px]">
+            Show me how
+          </Link>
+        )}
         {view === 'ask' && (
           <button
             type="button"

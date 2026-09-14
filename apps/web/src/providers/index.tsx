@@ -5,6 +5,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { Toaster } from 'sonner';
 import { PriceBookSync } from '@/components/price-book-sync';
 import { DrinkSpriteHost } from '@/components/drink-sprite-host';
+import { PwaHost } from '@/components/pwa/pwa-host';
 
 export function Providers({ children }: { children: React.ReactNode }) {
   const [queryClient] = useState(
@@ -37,6 +38,7 @@ export function Providers({ children }: { children: React.ReactNode }) {
     <QueryClientProvider client={queryClient}>
       <PriceBookSync />
       <DrinkSpriteHost />
+      <PwaHost />
       {children}
       <Toaster
         position="top-center"

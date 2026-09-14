@@ -11,7 +11,8 @@ import { useAuthStore } from '@/stores/auth.store';
 import { useSaveFavorite } from '@/hooks/use-favorites';
 import { sceneOf, DEFAULT_BUILD, type Build } from '@/lib/builder';
 import { useWebglStage } from '@/hooks/use-webgl-stage';
-import { needsHomeScreen, pushState, subscribePush, type PushState } from '@/lib/push';
+import { pushState, subscribePush, type PushState } from '@/lib/push';
+import { InstallInvite } from '@/components/pwa/install-invite';
 import type { Order } from '@/types/api.types';
 import { toast } from 'sonner';
 
@@ -264,6 +265,7 @@ function Tracker({ order, live }: { order: Order; live: boolean }) {
       </AnimatePresence>
 
       {!listo && <NotifyMe />}
+      <InstallInvite source="tracker" className="mb-6" />
 
       <div ref={stage} className="mb-8">
         <motion.div
@@ -400,15 +402,8 @@ function NotifyMe() {
 
   useEffect(() => setEstado(pushState()), []);
 
-  if (estado === 'unsupported') {
-    // On an iPhone the button cannot work until the site is on the Home Screen: say so.
-    return needsHomeScreen() ? (
-      <p className="mb-6 text-[13px] leading-relaxed text-stone2-600">
-        To get notified on iPhone, tap Share, then Add to Home Screen, and open Around the Bean from
-        there.
-      </p>
-    ) : null;
-  }
+  // On iPhone, InstallInvite below explains the Home Screen step.
+  if (estado === 'unsupported') return null;
 
   if (estado === 'granted') {
     return (

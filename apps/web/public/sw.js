@@ -1,19 +1,29 @@
 /*
  * Service worker de Around the Bean.
  *
- * Hace una sola cosa: recibir los avisos push y abrir el pedido al tocarlos.
- * No cachea páginas ni funciona sin conexión a propósito: un café no se
- * puede pedir offline, y una caché mal invalidada enseñaría precios o
- * estados de pedido viejos, que es justo lo que no puede pasar.
+ * Recibe los avisos push y abre el pedido al tocarlos. Sin conexión solo
+ * enseña una página que lo explica: no cachea páginas a propósito, porque un
+ * café no se puede pedir offline, y una caché mal invalidada enseñaría
+ * precios o estados de pedido viejos, que es justo lo que no puede pasar.
  *
  * Vive en /public y no en el bundle porque el navegador exige servirlo desde
  * la raíz para que controle todo el sitio.
  */
 
-self.addEventListener('install', () => {
+const OFFLINE = '/offline.html';
+const CACHE = 'atb-offline-v1';
+
+self.addEventListener('install', (event) => {
   // Un worker nuevo toma el control en cuanto se instala, sin esperar a que
-  // se cierren todas las pestañas. Aquí no hay caché que migrar.
+  // se cierren todas las pestañas. Lo único guardado es la página offline.
+  event.waitUntil(caches.open(CACHE).then((c) => c.addAll([OFFLINE, '/icons/icon-192.png'])));
   self.skipWaiting();
+});
+
+// Solo navegaciones: la red siempre primero, y la página offline si no hay red.
+self.addEventListener('fetch', (event) => {
+  if (event.request.mode !== 'navigate') return;
+  event.respondWith(fetch(event.request).catch(() => caches.match(OFFLINE)));
 });
 
 self.addEventListener('activate', (event) => {

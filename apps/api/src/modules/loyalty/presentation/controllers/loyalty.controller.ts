@@ -9,7 +9,7 @@ import { PrismaService } from '../../../../prisma/prisma.service';
 import { LoyaltyService } from '../../application/use-cases/loyalty.service';
 import { SendNotificationUseCase } from '../../../notifications/application/use-cases/send-notification.use-case';
 import * as t from '../../../notifications/domain/templates';
-import { CreateRewardDto, GrantPointsDto } from '../dtos/loyalty.dto';
+import { AppInstallDto, CreateRewardDto, GrantPointsDto } from '../dtos/loyalty.dto';
 
 @ApiTags('Loyalty')
 @Controller('loyalty')
@@ -67,6 +67,23 @@ export class LoyaltyController {
   @ApiOperation({ summary: 'Create a reward (OWNER only)' })
   createReward(@Body() dto: CreateRewardDto) {
     return this.prisma.reward.create({ data: dto });
+  }
+
+  @Post('app-install')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'One-time points for opening the app from the home screen' })
+  appInstall(@CurrentUser() user: JwtPayloadVo, @Body() dto: AppInstallDto) {
+    return this.loyalty.rewardAppInstall(user.sub, dto.source);
+  }
+
+  @Get('app-installs')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('OWNER', 'STAFF')
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'App installs per QR placement (OWNER / STAFF)' })
+  appInstalls() {
+    return this.loyalty.appInstallsBySource();
   }
 
   @Post('grant')
